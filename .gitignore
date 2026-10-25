@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+/storage/*
+!/storage/.gitkeep
+/public/uploads/*
+!/public/uploads/.gitkeep
+/vendor/
+.DS_Store
+.phpunit.result.cache
