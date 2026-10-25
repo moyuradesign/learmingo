@@ -21,8 +21,7 @@ final class Router
     {
         $handler = $this->routes[$method][$path] ?? null;
         if (!$handler) {
-            http_response_code(404);
-            echo '404 - Page not found';
+            Response::html('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Not found</title></head><body><main class="container py-5"><h1>404</h1><p>Page not found.</p></main></body></html>', 404);
             return;
         }
         $handler();
