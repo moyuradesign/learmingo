@@ -1,0 +1,58 @@
+CREATE TABLE IF NOT EXISTS `lm_roles` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  `slug` VARCHAR(50) NOT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `roles_slug_unique` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `lm_users` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `role_id` BIGINT UNSIGNED NOT NULL,
+  `name` VARCHAR(150) NOT NULL,
+  `email` VARCHAR(190) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
+  `status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `users_email_unique` (`email`), KEY `users_role_id_index` (`role_id`),
+  CONSTRAINT `users_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `lm_roles` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `lm_course_categories` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(150) NOT NULL,
+  `slug` VARCHAR(180) NOT NULL,
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `categories_slug_unique` (`slug`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `lm_courses` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `instructor_id` BIGINT UNSIGNED NOT NULL,
+  `category_id` BIGINT UNSIGNED NULL,
+  `title` VARCHAR(200) NOT NULL,
+  `slug` VARCHAR(220) NOT NULL,
+  `description` TEXT NULL,
+  `price` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  `status` ENUM('draft','pending','published','archived') NOT NULL DEFAULT 'draft',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `courses_slug_unique` (`slug`), KEY `courses_instructor_index` (`instructor_id`),
+  CONSTRAINT `courses_instructor_foreign` FOREIGN KEY (`instructor_id`) REFERENCES `lm_users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `courses_category_foreign` FOREIGN KEY (`category_id`) REFERENCES `lm_course_categories` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `lm_enrollments` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `course_id` BIGINT UNSIGNED NOT NULL,
+  `student_id` BIGINT UNSIGNED NOT NULL,
+  `progress` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  `status` ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), UNIQUE KEY `enrollments_course_student_unique` (`course_id`,`student_id`),
+  CONSTRAINT `enrollments_course_foreign` FOREIGN KEY (`course_id`) REFERENCES `lm_courses` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `enrollments_student_foreign` FOREIGN KEY (`student_id`) REFERENCES `lm_users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `lm_roles` (`name`, `slug`) VALUES ('Administrator', 'admin'), ('Instructor', 'instructor'), ('Student', 'student');
