@@ -20,8 +20,13 @@ final class Application
         require_once $basePath . '/app/Core/Router.php';
         require_once $basePath . '/app/Core/Database.php';
         require_once $basePath . '/app/Core/Response.php';
+        require_once $basePath . '/app/Core/Session.php';
+        require_once $basePath . '/app/Core/Csrf.php';
+        require_once $basePath . '/app/Core/Auth.php';
+        require_once $basePath . '/app/Core/View.php';
         require_once $basePath . '/app/Helpers/functions.php';
 
+        Session::start();
         $app = new self($basePath);
         require $basePath . '/routes/web.php';
         return $app;
