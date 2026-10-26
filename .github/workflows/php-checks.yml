@@ -23,6 +23,8 @@ jobs:
         run: |
           php tests/env_compat.php
           php -d disable_functions=putenv tests/env_compat.php
+      - name: LMS course policy checks
+        run: php tests/learning_policy.php
       - name: HTTP smoke test
         run: |
           set -euxo pipefail
