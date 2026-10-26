@@ -40,5 +40,11 @@ jobs:
           curl -sS -X POST -D /tmp/learmingo-csrf.txt -o /dev/null http://127.0.0.1:8765/logout
           grep -q 'HTTP/1.1 419' /tmp/learmingo-csrf.txt
           curl -sS -D /tmp/learmingo-setup-headers.txt -o /tmp/learmingo-setup.html http://127.0.0.1:8765/install/
-          grep -q 'Private setup token' /tmp/learmingo-setup.html
+          echo "Installer HTTP response headers:"
+          head -n 14 /tmp/learmingo-setup-headers.txt
+          if ! grep -q 'Private setup token' /tmp/learmingo-setup.html; then
+            echo "Installer response snippet:"
+            head -c 400 /tmp/learmingo-setup.html
+            exit 1
+          fi
           if grep -q 'Database password' /tmp/learmingo-setup.html; then exit 1; fi
