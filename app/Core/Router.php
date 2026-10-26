@@ -19,9 +19,25 @@ final class Router
 
     public function dispatch(string $method, string $path): void
     {
+        if (!in_array($method, ['GET', 'HEAD', 'POST'], true)) {
+            Response::html('Method not allowed', 405);
+            return;
+        }
+        $method = $method === 'HEAD' ? 'GET' : $method;
         $handler = $this->routes[$method][$path] ?? null;
         if (!$handler) {
-            Response::html('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Not found</title></head><body><main class="container py-5"><h1>404</h1><p>Page not found.</p></main></body></html>', 404);
+            $allowed = [];
+            foreach ($this->routes as $verb => $paths) {
+                if (isset($paths[$path])) {
+                    $allowed[] = $verb;
+                }
+            }
+            if ($allowed) {
+                header('Allow: ' . implode(', ', $allowed));
+                Response::html('Method not allowed', 405);
+                return;
+            }
+            Response::html('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Not found</title></head><body><main><h1>404</h1><p>Page not found.</p></main></body></html>', 404);
             return;
         }
         $handler();

@@ -17,3 +17,34 @@ jobs:
         run: find app bootstrap config install public resources routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Structural integration checks
         run: php tests/integration.php
+      - name: Security regression checks
+        run: php tests/security.php
+      - name: HTTP smoke test
+        run: |
+          set -euxo pipefail
+          php -S 127.0.0.1:8765 -t public tests/http_router.php >/tmp/learmingo-http.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for n in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8765/login -o /tmp/learmingo-login.html; then break; fi
+            sleep 1
+          done
+          grep -q 'name="_token"' /tmp/learmingo-login.html
+          curl -sS -D /tmp/learmingo-headers.txt -o /tmp/learmingo-home.html http://127.0.0.1:8765/
+          grep -qi 'content-security-policy:' /tmp/learmingo-headers.txt
+          grep -qi 'x-content-type-options: nosniff' /tmp/learmingo-headers.txt
+          grep -qi 'cache-control: private, no-store' /tmp/learmingo-headers.txt
+          curl -sS -D /tmp/learmingo-denied.txt -o /dev/null http://127.0.0.1:8765/admin
+          grep -q 'HTTP/1.1 303' /tmp/learmingo-denied.txt
+          grep -qi 'Location: /login' /tmp/learmingo-denied.txt
+          curl -sS -X POST -D /tmp/learmingo-csrf.txt -o /dev/null http://127.0.0.1:8765/logout
+          grep -q 'HTTP/1.1 419' /tmp/learmingo-csrf.txt
+          curl -sS -D /tmp/learmingo-setup-headers.txt -o /tmp/learmingo-setup.html http://127.0.0.1:8765/install/
+          echo "Installer HTTP response headers:"
+          head -n 14 /tmp/learmingo-setup-headers.txt
+          if ! grep -q 'Private setup token' /tmp/learmingo-setup.html; then
+            echo "Installer response snippet:"
+            head -c 400 /tmp/learmingo-setup.html
+            exit 1
+          fi
+          if grep -q 'Database password' /tmp/learmingo-setup.html; then exit 1; fi

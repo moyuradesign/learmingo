@@ -16,6 +16,9 @@ final class Database
         }
 
         $config = require dirname(__DIR__, 2) . '/config/database.php';
+        if ($config['database'] === '' || $config['username'] === '') {
+            throw new \RuntimeException('Database configuration is missing.');
+        }
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $config['host'], $config['port'], $config['database']);
         self::$connection = new PDO($dsn, $config['username'], $config['password'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

@@ -5,6 +5,7 @@
 !/storage/.gitkeep
 /public/uploads/*
 !/public/uploads/.gitkeep
+!/public/uploads/.htaccess
 /vendor/
 .DS_Store
 .phpunit.result.cache
