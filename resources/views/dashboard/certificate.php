@@ -1,0 +1,4 @@
+<section class="lm-page-hero"><div class="lm-container"><span class="lm-eyebrow">Credential verification</span><h1 class="lm-page-title"><?= $certificate?'Verified course certificate':'Certificate not found' ?></h1>
+<?php if ($certificate): ?><p class="lm-page-subtitle"><strong><?= e($certificate['learner_name']) ?></strong> completed <strong><?= e($certificate['course_title']) ?></strong>.</p>
+<p class="lm-muted">Issued <?= e($certificate['issued_at']) ?> · Verified against Learmingo’s credential record</p>
+<?php else: ?><p class="lm-page-subtitle">The credential is unknown or no longer valid.</p><?php endif; ?></div></section>

@@ -1,0 +1,4 @@
+<section class="lm-page-hero"><div class="lm-container"><h1 class="lm-page-title">Learner records</h1><p class="lm-page-subtitle">Enrollment progress for students in courses you teach.</p></div></section>
+<section class="lm-section lm-section-soft"><div class="lm-container"><div class="lm-panel"><div class="table-responsive"><table class="table lm-table"><thead><tr><th>Student</th><th>Course</th><th>Progress</th><th>Status</th></tr></thead><tbody>
+<?php foreach ($records as $record): ?><tr><td><?= e($record['learner']) ?></td><td><?= e($record['course_title']) ?></td><td><?= e($record['progress']) ?>%</td><td><?= e($record['status']) ?></td></tr><?php endforeach; ?>
+<?php if (!$records): ?><tr><td colspan="4">No enrolled students yet.</td></tr><?php endif; ?></tbody></table></div></div></div></section>

@@ -81,19 +81,16 @@ $router->post('/logout', static function (): void { if (!Csrf::verify($_POST['_t
 
 $router->get('/dashboard', static function () use ($requireAuth,$render): void { $user=$requireAuth(); $s=Database::connection()->prepare("SELECT e.progress,e.status,c.title,c.slug FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:id AND e.status<>'cancelled' ORDER BY e.created_at DESC");$s->execute(['id'=>$user['id']]);$render('dashboard/index',['enrollments'=>$s->fetchAll()]); });
 $router->post('/enroll', static function () use ($requireAuth): void {
-    $user = $requireAuth();
+    $user=$requireAuth();
     if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request',419); return; }
-    $id = filter_var($_POST['course_id'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+    $id=filter_var($_POST['course_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
     if (!$id) { Response::html('Invalid course',422); return; }
-    // Paid checkout is not implemented; never grant paid lessons without verified payment.
-    $s = Database::connection()->prepare("INSERT IGNORE INTO lm_enrollments (course_id,student_id) SELECT id,:student FROM lm_courses WHERE id=:course AND status='published' AND price=0");
-    $s->execute(['student'=>$user['id'],'course'=>$id]);
-    if ($s->rowCount() === 0) {
-        $existing = Database::connection()->prepare("SELECT id FROM lm_enrollments WHERE course_id=:course AND student_id=:student AND status<>'cancelled' LIMIT 1");
-        $existing->execute(['student'=>$user['id'],'course'=>$id]);
-        if (!$existing->fetch()) { Response::html('This course is not available for free enrollment.',403); return; }
+    try {
+        (new \Learmingo\Services\CourseVersions(Database::connection()))->enrollFree((int)$user['id'],(int)$id);
+        Response::redirect('/dashboard');
+    } catch (\RuntimeException $e) {
+        Response::html('Course unavailable for free enrollment',403);
     }
-    Response::redirect('/dashboard');
 });
 
 $router->get('/admin', static function () use ($requireRole,$render): void { $requireRole('admin');$db=Database::connection();$stats=['users'=>(int)$db->query('SELECT COUNT(*) FROM lm_users')->fetchColumn(),'courses'=>(int)$db->query('SELECT COUNT(*) FROM lm_courses')->fetchColumn(),'enrollments'=>(int)$db->query('SELECT COUNT(*) FROM lm_enrollments')->fetchColumn(),'published'=>(int)$db->query("SELECT COUNT(*) FROM lm_courses WHERE status='published'")->fetchColumn()];$render('admin/dashboard',['stats'=>$stats]); });
@@ -143,6 +140,13 @@ $router->post('/instructor/courses/store', static function () use ($requireRole,
 $router->get('/learn', static function () use ($requireAuth, $render): void {
     $user = $requireAuth();
     $slug = trim((string) ($_GET['course'] ?? ''));
+    $versioned=(new \Learmingo\Services\CourseVersions(Database::connection()))
+        ->classroom((int)$user['id'],$slug);
+    if ($versioned !== null) {
+        $versioned['course']['progress']=$versioned['course']['progress'] ?? 0;
+        $render('dashboard/learn',['course'=>$versioned['course'],'lessons'=>$versioned['lessons']]);
+        return;
+    }
     $db = Database::connection();
     $statement = $db->prepare("SELECT c.id,c.title,c.description,e.progress FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:student AND c.slug=:slug AND e.status <> 'cancelled' LIMIT 1");
     $statement->execute(['student' => $user['id'], 'slug' => $slug]);
@@ -158,3 +162,6 @@ $router->get('/learn', static function () use ($requireAuth, $render): void {
 
 // Learning core workflows live in a separate HTTP adapter.
 require __DIR__ . '/learning.php';
+
+// Milestone 3 learning management adapters.
+require __DIR__ . '/milestone3.php';

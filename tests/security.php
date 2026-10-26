@@ -56,7 +56,10 @@ foreach (['public/.htaccess','public/uploads/.htaccess','public/install/index.ph
 $routes = file_get_contents($root.'/routes/web.php');
 $assert(str_contains($routes, "RateLimiter::hit('login-ip'"), 'login limiter wired');
 $assert(str_contains($routes, "RateLimiter::hit('register-ip'"), 'register limiter wired');
-$assert(str_contains($routes, "price=0"), 'paid course guard');
+$versionService = file_get_contents($root.'/app/Services/CourseVersions.php');
+$assert(is_string($versionService) && str_contains($versionService, "Course unavailable for free enrollment.")
+    && str_contains($versionService, "!==0.0")
+    && str_contains($routes, '->enrollFree('), 'paid course guard');
 $assert(str_contains($routes, "r.slug<>'admin'"), 'admin role guard');
 $assert(str_contains($routes, 'Csrf::verify('), 'CSRF guard');
 $installer = file_get_contents($root.'/install/index.php');

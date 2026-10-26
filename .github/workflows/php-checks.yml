@@ -43,6 +43,10 @@ jobs:
           curl -sS -D /tmp/learmingo-denied.txt -o /dev/null http://127.0.0.1:8765/admin
           grep -q 'HTTP/1.1 303' /tmp/learmingo-denied.txt
           grep -qi 'Location: /login' /tmp/learmingo-denied.txt
+          curl -sS -D /tmp/learmingo-quiz-gate.txt -o /dev/null http://127.0.0.1:8765/quiz
+          grep -q 'HTTP/1.1 303' /tmp/learmingo-quiz-gate.txt
+          curl -sS -D /tmp/learmingo-version-gate.txt -o /dev/null http://127.0.0.1:8765/admin/course-versions
+          grep -q 'HTTP/1.1 303' /tmp/learmingo-version-gate.txt
           curl -sS -X POST -D /tmp/learmingo-csrf.txt -o /dev/null http://127.0.0.1:8765/logout
           grep -q 'HTTP/1.1 419' /tmp/learmingo-csrf.txt
           curl -sS -D /tmp/learmingo-setup-headers.txt -o /tmp/learmingo-setup.html http://127.0.0.1:8765/install/
