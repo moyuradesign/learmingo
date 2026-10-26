@@ -14,7 +14,7 @@ jobs:
       - name: Show PHP version
         run: php -v
       - name: Lint PHP sources
-        run: find app bootstrap config install public resources routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find app bootstrap config install public resources routes tests scripts -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Structural integration checks
         run: php tests/integration.php
       - name: Security regression checks

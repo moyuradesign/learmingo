@@ -105,3 +105,50 @@ $router->post('/learn/complete', static function () use ($requireAuth): void {
         Response::html('Lesson not found or access denied', 404);
     }
 });
+
+
+$router->post('/instructor/curriculum/change', static function () use ($requireRole, $input): void {
+    $actor = $requireRole('instructor', 'admin');
+    if (!Csrf::verify($_POST['_token'] ?? null)) {
+        Response::html('Invalid request', 419);
+        return;
+    }
+    $id = filter_var($_POST['item_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$id) { Response::html('Invalid curriculum item', 422); return; }
+    $operation = $input('operation', 32);
+    $core = new \Learmingo\Services\LearningCore(Database::connection());
+    try {
+        $courseId = match ($operation) {
+            'rename_section' => $core->renameSection((int)$actor['id'], (int)$id, $input('title', 200)),
+            'move_section' => $core->moveSection((int)$actor['id'], (int)$id, $input('direction', 8)),
+            'move_lesson' => $core->moveLesson((int)$actor['id'], (int)$id, $input('direction', 8)),
+            'delete_section' => $input('confirm', 8) === 'DELETE'
+                ? $core->deleteItem((int)$actor['id'], (int)$id, 'section')
+                : throw new \InvalidArgumentException('Type DELETE to confirm deletion.'),
+            'delete_lesson' => $input('confirm', 8) === 'DELETE'
+                ? $core->deleteItem((int)$actor['id'], (int)$id, 'lesson')
+                : throw new \InvalidArgumentException('Type DELETE to confirm deletion.'),
+            default => throw new \InvalidArgumentException('Invalid curriculum operation.'),
+        };
+        Response::redirect('/instructor/course?course=' . (int)$courseId);
+    } catch (\InvalidArgumentException | \RuntimeException $e) {
+        Response::html(e($e->getMessage()), 422);
+    }
+});
+
+$router->get('/admin/audit', static function () use ($requireRole, $render, $query): void {
+    $requireRole('admin');
+    $page = filter_var($query('page'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $page = min(10000, $page ?: 1);
+    $limit = 20;
+    $offset = ($page - 1) * $limit;
+    $db = Database::connection();
+    $s = $db->prepare('SELECT id,actor_id,action,subject_type,subject_id,created_at
+        FROM lm_audit_events ORDER BY id DESC LIMIT :limit OFFSET :offset');
+    $s->bindValue(':limit', $limit + 1, \PDO::PARAM_INT);
+    $s->bindValue(':offset', $offset, \PDO::PARAM_INT);
+    $s->execute();
+    $events = $s->fetchAll(\PDO::FETCH_ASSOC);
+    $hasMore = count($events) > $limit;
+    $render('admin/audit', ['events' => array_slice($events, 0, $limit), 'page' => $page, 'hasMore' => $hasMore]);
+});
