@@ -17,7 +17,7 @@ final class Session
         if (session_status() === PHP_SESSION_DISABLED) {
             throw new \RuntimeException('PHP sessions are required.');
         }
-        $name = getenv('SESSION_NAME') ?: 'learmingo_session';
+        $name = Environment::get('SESSION_NAME') ?: 'learmingo_session';
         if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/D', $name)) {
             throw new \RuntimeException('Invalid session configuration.');
         }

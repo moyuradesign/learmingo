@@ -7,7 +7,7 @@ final class Security
 {
     public static function isHttps(): bool
     {
-        $configuredUrl = getenv('APP_URL') ?: '';
+        $configuredUrl = Environment::get('APP_URL') ?: '';
         return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['SERVER_PORT'] ?? '') === '443')
             || str_starts_with(strtolower($configuredUrl), 'https://');
