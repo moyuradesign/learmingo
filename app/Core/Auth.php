@@ -7,7 +7,7 @@ use Throwable;
 
 final class Auth
 {
-    private const DUMMY_HASH = '$2y$10$abcdefghijklmnopqrstuu1hz26tOYBbpGy9TxMlJct56CjU0Cfmq';
+    private const DUMMY_HASH = '$2y$12$0TR31UTdxQl9L2aq4j0u8OYdokuV2phUHvWHdszUt0p5Di4KlQeKm';
 
     public static function attempt(string $email, string $password): bool
     {
