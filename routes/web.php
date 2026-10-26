@@ -8,7 +8,7 @@ use Learmingo\Core\Response;
 use Learmingo\Core\View;
 
 $router = $app->getRouter();
-$render = static fn(string $view, array $data = []): void => View::render($view, $data);
+$render = static function (string $view, array $data = []): void { View::render($view, $data); };
 $requireAuth = static function (): array { if (!Auth::check()) { Response::redirect('/login'); } return Auth::user() ?? []; };
 $requireRole = static function (string ...$roles): array { if (!Auth::check() || !Auth::role(...$roles)) { Response::html('Forbidden', 403); exit; } return Auth::user() ?? []; };
 
