@@ -30,6 +30,11 @@ $required = [
 'database/migrations/20261026_000010_enrollment_versions.sql',
 'database/migrations/20261026_000011_revision_drafts.sql',
 'database/migrations/20261026_000012_version_lesson_progress.sql',
+'database/migrations/20261026_000013_question_formats.sql',
+'database/migrations/20261026_000014_answer_selections.sql',
+'database/migrations/20261026_000015_certificate_revocations.sql',
+'resources/views/instructor/gradebook.php','resources/views/dashboard/attempt.php',
+'resources/views/admin/certificates.php',
 'public/assets/css/learmingo-premium.css','public/assets/js/learmingo-ui.js'
 ];
 foreach ($required as $file) {

@@ -210,3 +210,61 @@ $router->post('/admin/revisions/review', static function () use ($requireRole,$p
         Response::redirect('/admin/course-versions');
     } catch (\Throwable $e) { $deniedWork($e); }
 });
+
+
+$router->post('/instructor/quizzes/advanced-question', static function () use ($requireRole,$positive,$input,$csrfGate,$deniedWork): void {
+    $actor=$requireRole('instructor','admin');
+    if (!$csrfGate()) { return; }
+    $course=$positive($_POST['course_id']??null);
+    $quiz=$positive($_POST['quiz_id']??null);
+    try {
+        $owner=(new \Learmingo\Services\LearningCore(Database::connection()))->authorCourse((int)$actor['id'],$course);
+        if (!$owner) { throw new \RuntimeException('Course not found.'); }
+        $choices=$_POST['correct_choices']??[];
+        if (!is_array($choices)) { throw new \InvalidArgumentException('Invalid correct choices.'); }
+        foreach ($choices as $choice) {
+            if (!is_string($choice) || !in_array($choice,['a','b','c','d'],true)) {
+                throw new \InvalidArgumentException('Invalid correct choice.');
+            }
+        }
+        $format=$input('format',24);
+        $answer=$format==='true_false' ? $input('correct_single',1) : implode('',$choices);
+        (new AssessmentService(Database::connection()))->addAdvancedQuestion(
+            (int)$actor['id'],$quiz,$format,$input('prompt',1000),
+            ['a'=>$format==='true_false'?'True':$input('option_a',500),
+             'b'=>$format==='true_false'?'False':$input('option_b',500),
+             'c'=>$format==='true_false'?'Not used':$input('option_c',500),
+             'd'=>$format==='true_false'?'Not used':$input('option_d',500)],
+            $answer,(int)$input('points',3),$input('explanation',1000)
+        );
+        Response::redirect('/instructor/quizzes?course='.$course);
+    } catch (\Throwable $e) { $deniedWork($e); }
+});
+$router->get('/instructor/gradebook', static function () use ($requireRole,$positive,$query,$render): void {
+    $actor=$requireRole('instructor','admin');
+    $course=$positive($query('course'));
+    try {
+        $grades=(new AssessmentService(Database::connection()))->gradebook((int)$actor['id'],$course);
+        $render('instructor/gradebook',['grades'=>$grades,'courseId'=>$course]);
+    } catch (\RuntimeException $e) { Response::html('Course unavailable',404); }
+});
+$router->get('/student/attempt', static function () use ($requireRole,$positive,$query,$render): void {
+    $student=$requireRole('student');
+    $record=(new AssessmentService(Database::connection()))->studentAttempt((int)$student['id'],$positive($query('id')));
+    if (!$record) { Response::html('Attempt unavailable',404); return; }
+    $render('dashboard/attempt',['record'=>$record]);
+});
+$router->get('/admin/certificates', static function () use ($requireRole,$render): void {
+    $actor=$requireRole('admin');
+    $certificates=(new AssessmentService(Database::connection()))->recentCertificates((int)$actor['id']);
+    $render('admin/certificates',['certificates'=>$certificates]);
+});
+$router->post('/admin/certificates/revoke', static function () use ($requireRole,$positive,$input,$csrfGate,$deniedWork): void {
+    $admin=$requireRole('admin');
+    if (!$csrfGate()) { return; }
+    try {
+        (new AssessmentService(Database::connection()))->revokeCertificate((int)$admin['id'],
+            $positive($_POST['certificate_id']??null),$input('reason',500));
+        Response::redirect('/admin/certificates');
+    } catch (\Throwable $e) { $deniedWork($e); }
+});
