@@ -15,17 +15,8 @@ final class Application
     public static function boot(string $basePath): self
     {
         require_once $basePath . '/bootstrap/autoload.php';
-        require_once $basePath . '/config/app.php';
-        require_once $basePath . '/config/database.php';
-        require_once $basePath . '/app/Core/Router.php';
-        require_once $basePath . '/app/Core/Database.php';
-        require_once $basePath . '/app/Core/Response.php';
-        require_once $basePath . '/app/Core/Session.php';
-        require_once $basePath . '/app/Core/Csrf.php';
-        require_once $basePath . '/app/Core/Auth.php';
-        require_once $basePath . '/app/Core/View.php';
         require_once $basePath . '/app/Helpers/functions.php';
-
+        Security::sendHeaders();
         Session::start();
         $app = new self($basePath);
         require $basePath . '/routes/web.php';
@@ -39,6 +30,13 @@ final class Application
 
     public function run(): void
     {
-        $this->router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+        if (Security::postTooLarge()) {
+            Response::html('Request body too large', 413);
+            return;
+        }
+        $this->router->dispatch(
+            $_SERVER['REQUEST_METHOD'] ?? 'GET',
+            parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'
+        );
     }
 }

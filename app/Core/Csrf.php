@@ -14,9 +14,17 @@ final class Csrf
         return $_SESSION['_csrf'];
     }
 
-    public static function verify(?string $token): bool
+    public static function verify(mixed $token): bool
     {
         Session::start();
-        return is_string($token) && isset($_SESSION['_csrf']) && hash_equals($_SESSION['_csrf'], $token);
+        return is_string($token) && strlen($token) === 64
+            && isset($_SESSION['_csrf']) && is_string($_SESSION['_csrf'])
+            && hash_equals($_SESSION['_csrf'], $token);
+    }
+
+    public static function rotate(): void
+    {
+        Session::start();
+        $_SESSION['_csrf'] = bin2hex(random_bytes(32));
     }
 }
