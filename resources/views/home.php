@@ -7,7 +7,7 @@ $heroTitle = trim((string)($front['hero_title'] ?? 'Learn skills that move you f
 if ($heroTitle === 'Learn something remarkable.') { $heroTitle = 'Learn skills that move you forward.'; }
 $highlight = $heroTitle === 'Learn skills that move you forward.';
 ?>
-<div class="lm4-home">
+<div class="lm4-home" data-release="LEARMINGO_COURSE_FIRST_HOME_V104">
   <section class="lm4-hero" aria-labelledby="lm4-hero-heading">
     <div class="lm-container lm4-hero-grid">
       <div class="lm4-hero-content">
