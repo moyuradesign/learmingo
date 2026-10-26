@@ -18,7 +18,7 @@
     <nav class="lm-nav-links" aria-label="Main navigation">
       <a href="/courses">Explore courses</a>
       <a href="/#how-it-works">How it works</a>
-      <?php if ($user): ?><a href="/dashboard">My learning</a><a href="/student/records">My records</a><?php endif; ?>
+      <?php if ($user): ?><a href="/dashboard">My learning</a><?php if (($user['role'] ?? '') === 'student'): ?><a href="/student/records">My records</a><a href="/instructor/apply">Teach</a><?php endif; ?><?php endif; ?>
     </nav>
     <div class="lm-nav-actions">
       <?php if ($user): ?>
@@ -36,7 +36,7 @@
         <nav class="lm-mobile-panel" aria-label="Mobile navigation">
           <a href="/courses">Explore courses</a><a href="/#how-it-works">How it works</a>
           <?php if ($user): ?>
-            <a href="/dashboard">My learning</a><a href="/student/records">My records</a>
+            <a href="/dashboard">My learning</a><?php if (($user['role'] ?? '') === 'student'): ?><a href="/student/records">My records</a><a href="/instructor/apply">Teach</a><?php endif; ?>
             <?php if (($user['role'] ?? '') === 'admin'): ?><a href="/admin">Admin</a><a href="/admin/courses">Course review</a><a href="/admin/audit">Activity</a><a href="/admin/instructor-applications">Applications</a><a href="/admin/course-versions">Versions</a><?php endif; ?>
             <?php if (in_array($user['role'] ?? '', ['admin', 'instructor'], true)): ?><a href="/instructor">Instructor</a><a href="/instructor/records">Learner records</a><?php endif; ?>
             <form action="/logout" method="post"><?= csrf_field() ?><button type="submit">Sign out</button></form>
