@@ -12,6 +12,8 @@ $required = [
 'resources/views/instructor/dashboard.php','resources/views/instructor/course-form.php',
 'resources/views/instructor/course-builder.php','resources/views/admin/courses.php',
 'app/Domain/CoursePolicy.php','app/Services/LearningCore.php','routes/learning.php',
+'app/Infrastructure/MigrationRunner.php','app/Infrastructure/AuditTrail.php','scripts/migrate.php',
+'database/migrations/20261026_000001_create_audit_events.sql','resources/views/admin/audit.php',
 'public/assets/css/learmingo-premium.css','public/assets/js/learmingo-ui.js'
 ];
 foreach ($required as $file) {

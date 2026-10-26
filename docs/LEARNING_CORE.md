@@ -23,3 +23,15 @@ Run `php tests/learning_policy.php` and the standard source checks. In isolated 
 ## Deliberately deferred
 
 Content revisions for live courses, section/lesson deletion, assessment engine, quizzes, certificates, media pipeline, verified payments, instructor applications, messaging, analytics, background jobs, and audit event persistence. These should be built as separate milestones with database migrations, permissions and focused tests.
+
+## Milestone 2: operational infrastructure and draft content lifecycle
+
+- Explicit versioned SQL migrations with checksum ledger (`lm_schema_migrations`). Run `php scripts/migrate.php --check` to view pending changes; application boot NEVER applies schema changes automatically. After independent SQL backup and staging verification, `php scripts/migrate.php --apply` requires an explicit operator action. The migration process uses a MySQL advisory lock, refuses checksum drift, and is forward-only. MySQL DDL autocommits: SQL schema rollback is NOT automatic; restore a verified backup when required.
+- `20261026_000001_create_audit_events.sql` adds `lm_audit_events` with actor ID, action, subject and bounded nonsensitive context. The service writes audit events in the same InnoDB transaction as the associated business change; failed audit writes cause the business change to roll back.
+- Instructor draft courses support section renaming, moving sections/lessons up or down, and permanent deletion of sections or lessons with explicit DELETE confirmation. Only the course owner may edit a draft; pending/published curricula are locked. Destructive actions are also blocked for drafts with *any historical enrollment*.
+- Admin-only paginated activity view at `/admin/audit`, without exposing private context JSON to the browser. No audit log deletion endpoint.
+- All database-backed CI scenarios use disposable `learning_ci`; never run them against production or the persistent aaPanel QA database.
+
+## Deployment safety gate
+
+A running deployment MUST apply the audit migration before enabling curriculum mutation routes. If `lm_audit_events` is absent, audited actions fail closed. Existing production `.env`, sessions, uploads and data must be preserved. Do not run schema modifications before a database backup and a clean read-only migration status check.
