@@ -199,7 +199,7 @@ final class CourseVersions
     /** Return null only for legacy enrollments not yet pinned. */
     public function classroom(int $studentId, string $slug): ?array
     {
-        $q=$this->db->prepare("SELECT v.id version_id,v.title,e.id enrollment_id,e.progress,c.slug
+        $q=$this->db->prepare("SELECT c.id AS id,v.id version_id,v.title,e.id enrollment_id,e.progress,c.slug
             FROM lm_enrollments e JOIN lm_courses c ON c.id=e.course_id
             JOIN lm_enrollment_versions ev ON ev.enrollment_id=e.id
             JOIN lm_course_versions v ON v.id=ev.version_id
