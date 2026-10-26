@@ -63,7 +63,7 @@ foreach (['.lm-hero','.lm-auth-page','.lm-course-card','.lm-footer','.lm-mobile-
 }
 foreach (['resources/views/auth/login.php','resources/views/auth/register.php'] as $file) {
     $content = file_get_contents($root.'/'.$file);
-    foreach (['csrf_field()','method="post",$frontend104 ? 'lm2-auth-card' : 'lm-auth-card'] as $marker) {
+    foreach (['csrf_field()','method="post"',$frontend104 ? 'lm2-auth-card' : 'lm-auth-card'] as $marker) {
         if (!is_string($content) || !str_contains($content,$marker)) { fwrite(STDERR,"Auth marker missing from {$file}: {$marker}\n"); exit(1); }
     }
 }
