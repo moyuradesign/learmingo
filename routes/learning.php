@@ -47,21 +47,88 @@ $router->post('/instructor/lessons/store', static function () use ($requireRole,
 });
 
 $router->post('/instructor/lessons/update', static function () use ($requireRole, $input): void {
-    $user = $requireRole('instructor', 'admin');
+    $actor = $requireRole('instructor', 'admin');
     if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request', 419); return; }
-    $versionLesson=filter_var($_POST['version_lesson_id'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
-    $legacyLesson=filter_var($_POST['lesson_id'] ?? null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
-    if (!$versionLesson && !$legacyLesson) { Response::html('Invalid lesson',422); return; }
+    $lesson = filter_var($_POST['lesson_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $course = filter_var($_POST['course_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$lesson || !$course) { Response::html('Invalid lesson', 422); return; }
+    try {
+        $core = new \Learmingo\Services\LearningCore(Database::connection());
+        if ($core->authorCourse((int)$actor['id'], (int)$course) === null) {
+            Response::html('Course not found', 404);
+            return;
+        }
+        $core->editLesson((int)$actor['id'], (int)$lesson, $input('title', 200),
+            $input('content', 100000), trim($input('video_url', 500)));
+        Response::redirect('/instructor/course?course=' . (int)$course);
+    } catch (\InvalidArgumentException | \RuntimeException $exception) {
+        Response::html(e($exception->getMessage()), 422);
+    }
+});
+
+$router->post('/instructor/courses/submit', static function () use ($requireRole): void {
+    $actor = $requireRole('instructor', 'admin');
+    if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request', 419); return; }
+    $course = filter_var($_POST['course_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$course) { Response::html('Invalid course', 422); return; }
+    try {
+        (new \Learmingo\Services\LearningCore(Database::connection()))
+            ->submit((int)$actor['id'], (int)$course);
+        Response::redirect('/instructor/course?course=' . (int)$course);
+    } catch (\InvalidArgumentException | \RuntimeException $exception) {
+        Response::html(e($exception->getMessage()), 422);
+    }
+});
+
+$router->get('/admin/courses', static function () use ($requireRole, $render): void {
+    $requireRole('admin');
+    $courses = Database::connection()->query(
+        "SELECT c.id,c.title,c.slug,c.status,c.price,u.name instructor,
+          (SELECT COUNT(*) FROM lm_lessons l INNER JOIN lm_course_sections s
+           ON s.id=l.section_id WHERE s.course_id=c.id) lessons
+         FROM lm_courses c INNER JOIN lm_users u ON u.id=c.instructor_id
+         ORDER BY FIELD(c.status,'pending','draft','published','archived'),
+           c.created_at DESC LIMIT 300"
+    )->fetchAll(\PDO::FETCH_ASSOC);
+    $render('admin/courses', ['courses' => $courses]);
+});
+
+$router->post('/admin/courses/review', static function () use ($requireRole, $input): void {
+    $admin = $requireRole('admin');
+    if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request', 419); return; }
+    $course = filter_var($_POST['course_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$course) { Response::html('Invalid course', 422); return; }
+    try {
+        (new \Learmingo\Services\LearningCore(Database::connection()))
+            ->review((int)$admin['id'], 'admin', (int)$course, $input('decision', 20));
+        Response::redirect('/admin/courses');
+    } catch (\InvalidArgumentException | \RuntimeException $exception) {
+        Response::html(e($exception->getMessage()), 422);
+    }
+});
+
+$router->post('/learn/complete', static function () use ($requireRole): void {
+    $student = $requireRole('student');
+    if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request', 419); return; }
+    $versionLesson = filter_var($_POST['version_lesson_id'] ?? null, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]);
+    $legacyLesson = filter_var($_POST['lesson_id'] ?? null, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]);
+    // Neither ambiguous dual submissions nor zero/missing IDs can alter progress.
+    if (boolval($versionLesson) === boolval($legacyLesson)) {
+        Response::html('Invalid lesson request', 422);
+        return;
+    }
     try {
         if ($versionLesson) {
-            $slug=(new \Learmingo\Services\CourseVersions(Database::connection()))
-                ->completeVersionLesson((int)$user['id'],(int)$versionLesson);
+            $slug = (new \Learmingo\Services\CourseVersions(Database::connection()))
+                ->completeVersionLesson((int)$student['id'], (int)$versionLesson);
         } else {
-            $slug=(new \Learmingo\Services\LearningCore(Database::connection()))
-                ->completeLesson((int)$user['id'],(int)$legacyLesson);
+            $slug = (new \Learmingo\Services\LearningCore(Database::connection()))
+                ->completeLesson((int)$student['id'], (int)$legacyLesson);
         }
         Response::redirect('/learn?course=' . rawurlencode($slug));
-    } catch (\InvalidArgumentException | \RuntimeException $e) {
+    } catch (\InvalidArgumentException | \RuntimeException $exception) {
         Response::html('Lesson not found or access denied', 404);
     }
 });
