@@ -382,10 +382,15 @@ final class AssessmentService
             if (!$row || $row['status'] !== 'completed') {
                 throw new RuntimeException('Complete all required lessons first.');
             }
-            $existing=$this->db->prepare('SELECT id,credential,learner_name,course_title FROM lm_certificates WHERE student_id=:student AND course_id=:course AND revoked_at IS NULL');
+            $existing=$this->db->prepare('SELECT id,credential,learner_name,course_title,revoked_at FROM lm_certificates WHERE student_id=:student AND course_id=:course');
             $existing->execute(['student'=>$studentId,'course'=>$courseId]);
             $cert=$existing->fetch(PDO::FETCH_ASSOC);
-            if ($cert) { $this->db->commit(); return $cert; }
+            if ($cert) {
+                if ($cert['revoked_at'] !== null) {
+                    throw new RuntimeException('Revoked certificate cannot be reissued automatically.');
+                }
+                $this->db->commit(); return $cert;
+            }
             // A passing attempt on a published quiz belonging to this course is mandatory.
             $passed=$this->db->prepare("SELECT a.id FROM lm_quiz_attempts a JOIN lm_quizzes q ON q.id=a.quiz_id
                 WHERE a.student_id=:student AND q.course_id=:course AND a.passed=1 AND q.status='published'
