@@ -335,6 +335,13 @@ final class LearningCore
                 AND e.status IN ('active','completed') LIMIT 1 FOR UPDATE");
             $s->execute(['student' => $studentId, 'lesson' => $lessonId]);
             $enrollment = $s->fetch(PDO::FETCH_ASSOC);
+            if (is_array($enrollment)) {
+                $pin = $this->db->prepare('SELECT version_id FROM lm_enrollment_versions WHERE enrollment_id=:enrollment LIMIT 1');
+                $pin->execute(['enrollment' => $enrollment['id']]);
+                if ($pin->fetchColumn() !== false) {
+                    throw new RuntimeException('Use the pinned version lesson to save progress.');
+                }
+            }
             if (!is_array($enrollment)) {
                 throw new RuntimeException('Lesson not available to this student.');
             }

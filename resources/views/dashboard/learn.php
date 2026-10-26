@@ -12,8 +12,19 @@
     <?php $video = (string)($lesson['video_url'] ?? ''); $scheme = strtolower((string)parse_url($video, PHP_URL_SCHEME)); ?>
     <?php if (filter_var($video, FILTER_VALIDATE_URL) && in_array($scheme, ['http', 'https'], true)): ?><a class="lm-button lm-button-outline" href="<?= e($video) ?>" target="_blank" rel="noopener noreferrer">Open lesson video ↗</a><?php endif; ?>
     <?php if ($lesson['completed_at'] === null): ?>
-      <form method="post" action="/learn/complete" class="mt-3"><?= csrf_field() ?><input type="hidden" name="lesson_id" value="<?= (int)$lesson['id'] ?>"><button class="lm-button lm-button-primary" type="submit">Mark lesson completed</button></form>
+      <form method="post" action="/learn/complete" class="mt-3"><?= csrf_field() ?><?php if (isset($lesson['version_lesson_id'])): ?>
+      <input type="hidden" name="version_lesson_id" value="<?= (int)$lesson['version_lesson_id'] ?>">
+      <?php else: ?><input type="hidden" name="lesson_id" value="<?= (int)$lesson['id'] ?>"><?php endif; ?><button class="lm-button lm-button-primary" type="submit">Mark lesson completed</button></form>
     <?php else: ?><p class="lm-muted small mt-3">You have completed this lesson.</p><?php endif; ?>
     </div>
   </details>
-<?php endforeach; ?></div><?php endif; ?></div></section>
+<?php endforeach; ?></div><?php endif; ?>
+<div class="lm-panel mt-4"><div class="lm-panel-body">
+<h2 class="lm-panel-title">Assessments and certificates</h2>
+<p class="lm-muted small">Take a published course assessment after studying the lessons. Certificate eligibility requires completing all lessons and passing a published assessment.</p>
+<?php $quizList=(new \Learmingo\Services\AssessmentService(\Learmingo\Core\Database::connection()))->courseQuizzes((int)$course['id']); ?>
+<?php foreach ($quizList as $quiz): ?><?php if ($quiz['status']==='published'): ?>
+<p class="mb-2"><a href="/quiz?id=<?= (int)$quiz['id'] ?>"><?= e($quiz['title']) ?></a> · Pass <?= (int)$quiz['passing_percent'] ?>%</p>
+<?php endif; ?><?php endforeach; ?>
+<a class="lm-button lm-button-outline mt-2" href="/student/records">View grades and certificates</a>
+</div></div></div></section>

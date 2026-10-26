@@ -12,7 +12,13 @@
     <div class="lm-panel mb-4"><div class="lm-panel-body">
       <h2 class="lm-panel-title">Course details</h2>
       <p class="lm-muted mb-2">URL: <code><?= e($course['slug']) ?></code> · <?= (float)$course['price'] <= 0 ? 'Free' : '$'.e(number_format((float)$course['price'], 2)) ?></p>
-      <p class="lm-muted small mb-0">Published courses cannot be edited in place; curriculum versioning will be introduced separately to protect learner progress.</p>
+      <p class="lm-muted small mb-2">Live lessons remain locked. Proposed updates are edited and reviewed in detached revision drafts, so enrolled learners keep their version.</p>
+      <a class="lm-button lm-button-outline" href="/instructor/quizzes?course=<?= (int)$course['id'] ?>">Manage assessments</a>
+      <?php if ($course['status']==='published'): ?>
+        <form class="mt-3" method="post" action="/instructor/revisions/create"><?= csrf_field() ?>
+        <input type="hidden" name="course_id" value="<?= (int)$course['id'] ?>">
+        <button class="lm-button lm-button-primary" type="submit">Create detached course revision</button></form>
+      <?php endif; ?>
     </div></div>
     <?php if ($editable): ?>
       <div class="lm-form-card mb-4">
