@@ -148,8 +148,11 @@ final class LearningCore
         }
     }
 
-    public function review(int $courseId, string $decision): void
+    public function review(int $actorId, string $role, int $courseId, string $decision): void
     {
+        if ($actorId < 1 || $role !== 'admin') {
+            throw new RuntimeException('Administrator permissions required.');
+        }
         if (!in_array($decision, ['approve', 'reject'], true)) {
             throw new \InvalidArgumentException('Invalid review decision.');
         }

@@ -54,3 +54,29 @@ jobs:
             exit 1
           fi
           if grep -q 'Database password' /tmp/learmingo-setup.html; then exit 1; fi
+
+  learning-database:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: integration_only_root
+          MYSQL_DATABASE: learning_ci
+          MYSQL_USER: learning_ci
+          MYSQL_PASSWORD: integration_only_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pintegration_only_root"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      LEARNING_TEST_DB_HOST: 127.0.0.1
+      LEARNING_TEST_DB_PORT: 3306
+      LEARNING_TEST_DB_NAME: learning_ci
+      LEARNING_TEST_DB_USER: learning_ci
+      LEARNING_TEST_DB_PASSWORD: integration_only_pass
+    steps:
+      - uses: actions/checkout@v4
+      - name: Database-backed LMS workflow tests
+        run: php tests/learning_database.php

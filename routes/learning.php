@@ -81,12 +81,12 @@ $router->get('/admin/courses', static function () use ($requireRole, $render): v
 });
 
 $router->post('/admin/courses/review', static function () use ($requireRole, $input): void {
-    $requireRole('admin');
+    $actor = $requireRole('admin');
     if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request', 419); return; }
     $course = filter_var($_POST['course_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if (!$course) { Response::html('Invalid course', 422); return; }
     try {
-        (new \Learmingo\Services\LearningCore(Database::connection()))->review((int) $course, $input('decision', 20));
+        (new \Learmingo\Services\LearningCore(Database::connection()))->review((int) $actor['id'], (string) $actor['role'], (int) $course, $input('decision', 20));
         Response::redirect('/admin/courses');
     } catch (\InvalidArgumentException | \RuntimeException $e) {
         Response::html(e($e->getMessage()), 422);
