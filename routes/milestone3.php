@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 // Loaded after the shared router, authentication, input and view closures.
+use Learmingo\Core\Database;
+use Learmingo\Core\Csrf;
+use Learmingo\Core\Response;
 use Learmingo\Services\InstructorApplications;
 use Learmingo\Services\AssessmentService;
 use Learmingo\Services\CourseVersions;
