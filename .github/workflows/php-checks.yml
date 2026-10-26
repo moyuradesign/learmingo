@@ -1,0 +1,19 @@
+name: PHP checks
+on:
+  push:
+    branches: [Main, feature/premium-auth-ui]
+  pull_request:
+    branches: [Main]
+permissions:
+  contents: read
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show PHP version
+        run: php -v
+      - name: Lint PHP sources
+        run: find app bootstrap config install public resources routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Structural integration checks
+        run: php tests/integration.php
