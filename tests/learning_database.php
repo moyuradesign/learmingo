@@ -35,7 +35,11 @@ $temporary = sys_get_temp_dir() . '/learmingo-ledger-' . bin2hex(random_bytes(8)
 if (!mkdir($temporary, 0700)) { throw new RuntimeException('Temporary migration test directory unavailable.'); }
 $copy = $temporary . '/' . basename($source);
 try {
-    if (!copy($source, $copy)) { throw new RuntimeException('Migration test copy failed.'); }
+    foreach (glob(dirname(__DIR__) . '/database/migrations/*.sql') ?: [] as $migration) {
+        if (!copy($migration, $temporary . '/' . basename($migration))) {
+            throw new RuntimeException('Migration test copy failed.');
+        }
+    }
     $copyRunner = new MigrationRunner($pdo, $temporary);
     if ($copyRunner->status() !== $installed) { throw new RuntimeException('Identical migration source mismatch.'); }
     file_put_contents($copy, "\n", FILE_APPEND);
@@ -46,7 +50,7 @@ try {
         if ($e->getMessage() === 'Checksum drift was not detected.') { throw $e; }
     }
 } finally {
-    @unlink($copy);
+    foreach (glob($temporary.'/*.sql') ?: [] as $migration) { @unlink($migration); }
     @rmdir($temporary);
 }
 $check = static function (bool $ok, string $label): void {
