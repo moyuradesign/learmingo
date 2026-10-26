@@ -14,6 +14,22 @@ $required = [
 'app/Domain/CoursePolicy.php','app/Services/LearningCore.php','routes/learning.php',
 'app/Infrastructure/MigrationRunner.php','app/Infrastructure/AuditTrail.php','scripts/migrate.php',
 'database/migrations/20261026_000001_create_audit_events.sql','resources/views/admin/audit.php',
+'app/Services/InstructorApplications.php','app/Services/AssessmentService.php','app/Services/CourseVersions.php',
+'routes/milestone3.php','resources/views/instructor/apply.php','resources/views/admin/instructor-applications.php',
+'resources/views/instructor/quizzes.php','resources/views/dashboard/quiz.php','resources/views/dashboard/quiz-result.php',
+'resources/views/dashboard/records.php','resources/views/instructor/records.php','resources/views/dashboard/certificate.php',
+'resources/views/admin/course-versions.php','resources/views/instructor/revision.php',
+'database/migrations/20261026_000002_instructor_applications.sql',
+'database/migrations/20261026_000003_quizzes.sql',
+'database/migrations/20261026_000004_quiz_questions.sql',
+'database/migrations/20261026_000005_quiz_attempts.sql',
+'database/migrations/20261026_000006_quiz_answers.sql',
+'database/migrations/20261026_000007_certificates.sql',
+'database/migrations/20261026_000008_course_versions.sql',
+'database/migrations/20261026_000009_version_lessons.sql',
+'database/migrations/20261026_000010_enrollment_versions.sql',
+'database/migrations/20261026_000011_revision_drafts.sql',
+'database/migrations/20261026_000012_version_lesson_progress.sql',
 'public/assets/css/learmingo-premium.css','public/assets/js/learmingo-ui.js'
 ];
 foreach ($required as $file) {

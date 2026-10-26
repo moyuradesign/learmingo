@@ -35,3 +35,17 @@ Content revisions for live courses, section/lesson deletion, assessment engine, 
 ## Deployment safety gate
 
 A running deployment MUST apply the audit migration before enabling curriculum mutation routes. If `lm_audit_events` is absent, audited actions fail closed. Existing production `.env`, sessions, uploads and data must be preserved. Do not run schema modifications before a database backup and a clean read-only migration status check.
+
+## Milestone 3: instructor onboarding, assessments and versioned learning
+
+- `lm_instructor_applications`: student applications require a substantive teaching statement; an administrator may approve (atomically changing the database role to instructor) or reject. Resubmission is only available after rejection. Decisions are audited. A newly promoted instructor must sign in / let the session revalidate before using teaching routes.
+- `lm_quizzes` and `lm_quiz_questions`: instructors create draft multiple-choice quizzes for courses they own. They may publish only when the course is published and questions exist. A published quiz is immutable (options and answer keys are never sent to student views).
+- `lm_quiz_attempts` and `lm_quiz_answers`: server-side grading, student enrollment requirements, locked attempt counters, exact question coverage, no client-supplied scores, and a maximum attempt limit. Completed attempts cannot be edited.
+- `lm_certificates`: a certificate is issued only to an enrolled learner with completed lessons and a passed published assessment. Credentials are random 256-bit values and verification is noindex/no-store. Records use learner/course names captured on issuance; a revoked credential will not verify.
+- `lm_course_versions` and `lm_version_lessons`: immutable snapshots of approved curricula. The explicit administrator baseline tool snapshots a previously published course and pins existing enrollments to version 1, migrating their existing completed-lesson records.
+- `lm_enrollment_versions` and `lm_version_lesson_progress`: newly enrolled students pin to the latest published snapshot, existing learners remain pinned to their version. The classroom uses snapshot-specific lessons and progress. Legacy completion requests on pinned enrollments are blocked.
+- `lm_course_revision_drafts`: an instructor may propose a detached revision for a baseline-versioned published course, edit its lesson body/title/video, then submit. Administrator approval creates a new immutable version. The live legacy curriculum remains locked. Only new enrollments receive the new version; no mass migration of existing learners.
+
+### Guarded rollout
+
+This is a **forward-only migration series**, not an automatically deployed upgrade. Never apply schema changes to the production database before taking and verifying a database backup, reviewing schema drift, and testing the exact release on an isolated staging copy. The old aaPanel QA database has not been updated. Current frontend/browser acceptance, email notifications, cryptographic PDF signing, payment processing, freeform exams, rich question banks, section changes within detached revisions, and comprehensive attempt analytics are not claimed complete.
