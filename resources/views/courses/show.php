@@ -1,1 +1,15 @@
-<section class="container py-5"><div class="row"><div class="col-lg-8"><span class="badge text-bg-primary mb-3">Published course</span><h1><?= e($course['title']) ?></h1><p class="lead"><?= e($course['description']) ?></p><p class="text-muted">Instructor: <?= e($course['instructor']) ?></p></div><div class="col-lg-4"><div class="card shadow-sm"><div class="card-body"><h2 class="h3">$<?= e(number_format((float)$course['price'], 2)) ?></h2><p class="text-muted">Self-paced learning</p><?php if (auth_user()): ?><form method="post" action="/enroll"><?= csrf_field() ?><input type="hidden" name="course_id" value="<?= e((string)$course['id']) ?>"><button class="btn btn-primary w-100">Enroll now</button></form><?php else: ?><a href="/login" class="btn btn-primary w-100">Sign in to enroll</a><?php endif; ?></div></div></div></div></section>
+<section class="lm-page-hero"><div class="lm-container">
+  <a href="/courses" class="text-decoration-none fw-semibold small">← All courses</a>
+  <div class="mt-4"><span class="lm-eyebrow">Self-paced course</span><h1 class="lm-page-title mt-3"><?= e($course['title']) ?></h1><p class="lm-page-subtitle">Learn at your own pace with guidance from <?= e($course['instructor']) ?>.</p></div>
+</div></section>
+<section class="lm-section"><div class="lm-container lm-detail-grid">
+  <article><h2 class="lm-section-heading mb-3">About this course</h2><div class="lm-detail-copy"><?= e($course['description']) ?></div><div class="lm-panel mt-4"><div class="lm-panel-body"><h3 class="lm-panel-title mb-2">Meet your instructor</h3><p class="lm-muted mb-0"><?= e($course['instructor']) ?></p></div></div></article>
+  <aside class="lm-detail-card" aria-label="Course enrollment">
+    <div class="lm-course-art rounded-3 mb-4"><span class="lm-course-art-icon" aria-hidden="true">✦</span></div>
+    <div class="lm-course-kicker">Ready to begin?</div><div class="lm-detail-price mt-2"><?= (float)$course['price'] <= 0 ? 'Free' : '$' . e(number_format((float)$course['price'], 2)) ?></div>
+    <ul class="lm-detail-benefits"><li>Learn at your own pace</li><li>Track your progress</li><li>Access your learning dashboard</li></ul>
+    <?php if (auth_user()): ?>
+      <form method="post" action="/enroll"><?= csrf_field() ?><input type="hidden" name="course_id" value="<?= e((string)$course['id']) ?>"><button type="submit" class="lm-button lm-button-primary w-100">Enroll in this course →</button></form>
+    <?php else: ?><a href="/login" class="lm-button lm-button-primary w-100">Sign in to enroll →</a><p class="lm-muted small text-center mt-3 mb-0">New here? <a href="/register">Create an account</a></p><?php endif; ?>
+  </aside>
+</div></section>
