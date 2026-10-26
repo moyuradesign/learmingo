@@ -7,6 +7,7 @@ use Learmingo\Core\Security;
 use Learmingo\Core\Session;
 
 $root = dirname(__DIR__);
+umask(0077); // Private tokens and credentials are never briefly world-readable.
 require_once $root . '/bootstrap/app.php';
 Security::sendHeaders();
 Session::start();

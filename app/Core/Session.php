@@ -74,6 +74,8 @@ final class Session
     {
         self::start();
         session_regenerate_id(true);
+        $_SESSION['_created_at'] = time();
+        $_SESSION['_last_seen_at'] = time();
         $_SESSION['_renewed_at'] = time();
     }
 }
