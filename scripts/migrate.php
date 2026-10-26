@@ -13,14 +13,26 @@ use Learmingo\Core\Database;
 use Learmingo\Infrastructure\MigrationRunner;
 
 $command = $argv[1] ?? '';
-if (!in_array($command, ['--check', '--apply'], true) || count($argv) !== 2) {
-    fwrite(STDERR, "Usage: php scripts/migrate.php --check|--apply\n");
+if ($command === '--check' && count($argv) !== 2) {
+    fwrite(STDERR, "Usage: php scripts/migrate.php --check\n");
+    exit(2);
+}
+if ($command === '--apply' && (count($argv) !== 4
+    || ($argv[3] ?? '') !== 'I_HAVE_A_VERIFIED_DATABASE_BACKUP')) {
+    fwrite(STDERR, "Usage: php scripts/migrate.php --apply TARGET_DB I_HAVE_A_VERIFIED_DATABASE_BACKUP\n");
+    exit(2);
+}
+if (!in_array($command, ['--check', '--apply'], true)) {
+    fwrite(STDERR, "Invalid migration command.\n");
     exit(2);
 }
 try {
     $db = Database::connection();
     $target = (string)$db->query('SELECT DATABASE()')->fetchColumn();
     if ($target === '') { throw new RuntimeException('Unknown target database.'); }
+    if ($command === '--apply' && !hash_equals($target, (string)$argv[2])) {
+        throw new RuntimeException('Target database does not match expected name.');
+    }
     $runner = new MigrationRunner($db, $root . '/database/migrations');
     $statuses = $command === '--apply' ? $runner->apply() : $runner->status();
     foreach ($statuses as $name => $state) {

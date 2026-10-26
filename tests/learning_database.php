@@ -26,6 +26,26 @@ $installed = $migrator->apply();
 if (in_array('PENDING', $installed, true) || $migrator->apply() !== $installed) {
     throw new RuntimeException('Migration apply or idempotency failure.');
 }
+// Use a disposable temporary migration copy to prove checksum drift fails closed.
+$source = dirname(__DIR__) . '/database/migrations/20261026_000001_create_audit_events.sql';
+$temporary = sys_get_temp_dir() . '/learmingo-ledger-' . bin2hex(random_bytes(8));
+if (!mkdir($temporary, 0700)) { throw new RuntimeException('Temporary migration test directory unavailable.'); }
+$copy = $temporary . '/' . basename($source);
+try {
+    if (!copy($source, $copy)) { throw new RuntimeException('Migration test copy failed.'); }
+    $copyRunner = new MigrationRunner($pdo, $temporary);
+    if ($copyRunner->status() !== $installed) { throw new RuntimeException('Identical migration source mismatch.'); }
+    file_put_contents($copy, "\n", FILE_APPEND);
+    try {
+        $copyRunner->status();
+        throw new RuntimeException('Checksum drift was not detected.');
+    } catch (RuntimeException $e) {
+        if ($e->getMessage() === 'Checksum drift was not detected.') { throw $e; }
+    }
+} finally {
+    @unlink($copy);
+    @rmdir($temporary);
+}
 $check = static function (bool $ok, string $label): void {
     if (!$ok) { throw new RuntimeException('LMS DB TEST FAILED: '.$label); }
 };

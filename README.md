@@ -37,7 +37,11 @@ The core includes stronger session security, CSRF token rotation, login/registra
 
 ## Development status
 
-This repository contains the initial v0.0.1 infrastructure and is being developed in small, reviewable commits. Production features such as course authoring, lessons, quizzes, enrollments, payments, certificates, and reporting will be added incrementally.
+Development now includes instructor-owned draft courses, section/lesson authoring and ordering, admin course review, student progress, and transactional activity records. The infrastructure milestone adds manual SHA256-ledger SQL migrations. See [Learning core](docs/LEARNING_CORE.md) for exact capabilities and deferred modules. This is not yet a fully accepted production release: database migrations and real aaPanel QA must pass before deployment. Payments, assessments, certificates and reporting remain future milestones.
+
+## Database migrations (operator-only)
+
+Always back up the target database and verify the backup before applying schema changes. Run read-only `php scripts/migrate.php --check`; after staging approval, use `php scripts/migrate.php --apply TARGET_DB I_HAVE_A_VERIFIED_DATABASE_BACKUP`. Migrations are checksummed and forward-only, and MySQL DDL does not roll back automatically. Never run the tests against a real customer database.
 
 ## License
 
