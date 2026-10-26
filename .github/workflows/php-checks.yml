@@ -19,6 +19,10 @@ jobs:
         run: php tests/integration.php
       - name: Security regression checks
         run: php tests/security.php
+      - name: Environment loader compatibility
+        run: |
+          php tests/env_compat.php
+          php -d disable_functions=putenv tests/env_compat.php
       - name: HTTP smoke test
         run: |
           set -euxo pipefail

@@ -10,6 +10,8 @@ Security headers include Content-Security-Policy, X-Frame-Options, nosniff, Refe
 
 Admin status controls protect administrator accounts, including the last admin. Registration always creates student roles. Paid self-enrollment is disabled until verified checkout exists. Review historical paid course enrollments before deployment because the previous endpoint did not enforce payment.
 
+The environment loader supports PHP hosting configurations in which `putenv()` is disabled, using an internal configuration reader while honoring server-provided environment variables. Keep .env outside public/.
+
 ## Fresh installation
 
 1. Back up your data. Point the domain document root to the public/ directory. Keep .env, storage/, install/, and database/ outside public/.
