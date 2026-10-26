@@ -17,6 +17,8 @@ jobs:
         run: find app bootstrap config install public resources routes tests scripts -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Structural integration checks
         run: php tests/integration.php
+      - name: Included route class resolution regression
+        run: php tests/route_imports.php
       - name: Security regression checks
         run: php tests/security.php
       - name: Environment loader compatibility

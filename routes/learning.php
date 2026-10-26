@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 // This adapter is loaded by routes/web.php after its shared closures.
+// PHP imports are file-scoped, including when a file is required.
+use Learmingo\Core\Database;
+use Learmingo\Core\Csrf;
+use Learmingo\Core\Response;
 
 $router->get('/instructor/course', static function () use ($requireRole, $render, $query): void {
     $user = $requireRole('instructor', 'admin');
