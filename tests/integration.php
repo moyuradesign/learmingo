@@ -10,6 +10,8 @@ $required = [
 'resources/views/dashboard/index.php','resources/views/dashboard/learn.php',
 'resources/views/admin/dashboard.php','resources/views/admin/users.php',
 'resources/views/instructor/dashboard.php','resources/views/instructor/course-form.php',
+'resources/views/instructor/course-builder.php','resources/views/admin/courses.php',
+'app/Domain/CoursePolicy.php','app/Services/LearningCore.php','routes/learning.php',
 'public/assets/css/learmingo-premium.css','public/assets/js/learmingo-ui.js'
 ];
 foreach ($required as $file) {
