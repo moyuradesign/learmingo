@@ -185,6 +185,7 @@ $learner=$user('student','versionedlearner@invalid.test');
 $versions->enrollFree($learner,$id);
 $before=$versions->classroom($learner,'first-course');
 $check(count($before['lessons'])===2,'snapshot classroom has two lessons');
+$check((int)$before['course']['id']===$id,'pinned classroom retains course id for assessments');
 $versionLesson=(int)$before['lessons'][0]['version_lesson_id'];
 $check($before['lessons'][0]['completed_at']===null,'new enrollment has no completions');
 $deny(fn()=>$core->completeLesson($learner,$l1),'legacy write blocked for pinned learner');
