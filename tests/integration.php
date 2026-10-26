@@ -49,7 +49,12 @@ foreach (["'/register'","'/enroll'","'/learn'","'/admin/users'","'/instructor/co
     if (!is_string($routes) || !str_contains($routes,$route)) { fwrite(STDERR,"Route missing {$route}.\n"); exit(1); }
 }
 $layout = file_get_contents($root.'/resources/views/layouts/app.php');
-foreach (['lm-main','lm-footer','lm-nav','lm-mobile-menu','learmingo-premium.css','learmingo-ui.js'] as $marker) {
+// Accept the legacy shell on older releases; require the stronger v1.0.4 layout when installed.
+$frontend104 = str_contains($routes, "require __DIR__ . '/frontend.php'");
+$layoutMarkers = $frontend104
+    ? ['lm2-main','lm2-footer','lm2-header','lm2-mobile-menu','learmingo-ui/style','learmingo-ui/script']
+    : ['lm-main','lm-footer','lm-nav','lm-mobile-menu','learmingo-premium.css','learmingo-ui.js'];
+foreach ($layoutMarkers as $marker) {
     if (!is_string($layout) || !str_contains($layout,$marker)) { fwrite(STDERR,"Layout marker missing {$marker}.\n"); exit(1); }
 }
 $css = file_get_contents($root.'/public/assets/css/learmingo-premium.css');
@@ -58,7 +63,7 @@ foreach (['.lm-hero','.lm-auth-page','.lm-course-card','.lm-footer','.lm-mobile-
 }
 foreach (['resources/views/auth/login.php','resources/views/auth/register.php'] as $file) {
     $content = file_get_contents($root.'/'.$file);
-    foreach (['csrf_field()','method="post"','lm-auth-card'] as $marker) {
+    foreach (['csrf_field()','method="post",$frontend104 ? 'lm2-auth-card' : 'lm-auth-card'] as $marker) {
         if (!is_string($content) || !str_contains($content,$marker)) { fwrite(STDERR,"Auth marker missing from {$file}: {$marker}\n"); exit(1); }
     }
 }
