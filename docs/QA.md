@@ -8,6 +8,10 @@ Run from the project root:
 find app bootstrap config install routes public -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
+## Additional core-hardening checks
+
+Run `php tests/security.php` and read `docs/SECURITY.md` before deployment. The public document root must be `public/`; keep storage and `.env` private. Test login throttling, session revalidation and paid-course denial in staging.
+
 ## Installer checks
 
 1. Confirm PHP 8.1+ and PDO MySQL are enabled.

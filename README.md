@@ -31,6 +31,10 @@ Learmingo provides a maintainable foundation for administrators, instructors, an
 5. Complete the five steps: requirements, database, application configuration, administrator, and completion.
 6. Remove or disable installer access after installation. Learmingo creates an installation lock in `storage/installed.lock`.
 
+## Security hardening
+
+The core includes stronger session security, CSRF token rotation, login/registration throttling, live authorization revalidation and a private setup-token installer. The installer requires a server-side token from `storage/setup.token` on fresh installations. See [Security & deployment](docs/SECURITY.md) before upgrading or deploying. Paid self-enrollment is disabled until verified checkout is implemented.
+
 ## Development status
 
 This repository contains the initial v0.0.1 infrastructure and is being developed in small, reviewable commits. Production features such as course authoring, lessons, quizzes, enrollments, payments, certificates, and reporting will be added incrementally.
