@@ -19,6 +19,8 @@ jobs:
         run: php tests/integration.php
       - name: Included route class resolution regression
         run: php tests/route_imports.php
+      - name: Learning route workflow regression
+        run: php tests/learning_routes.php
       - name: Security regression checks
         run: php tests/security.php
       - name: Environment loader compatibility
