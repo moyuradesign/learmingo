@@ -79,7 +79,7 @@ $router->post('/register', static function () use ($render,$input): void {
 
 $router->post('/logout', static function (): void { if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request',419); return; } Auth::logout(); Response::redirect('/'); });
 
-$router->get('/dashboard', static function () use ($requireAuth,$render): void { $user=$requireAuth(); $s=Database::connection()->prepare('SELECT e.progress,e.status,c.title,c.slug FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:id AND e.status<>'cancelled' ORDER BY e.created_at DESC');$s->execute(['id'=>$user['id']]);$render('dashboard/index',['enrollments'=>$s->fetchAll()]); });
+$router->get('/dashboard', static function () use ($requireAuth,$render): void { $user=$requireAuth(); $s=Database::connection()->prepare("SELECT e.progress,e.status,c.title,c.slug FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:id AND e.status<>'cancelled' ORDER BY e.created_at DESC");$s->execute(['id'=>$user['id']]);$render('dashboard/index',['enrollments'=>$s->fetchAll()]); });
 $router->post('/enroll', static function () use ($requireAuth): void {
     $user = $requireAuth();
     if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request',419); return; }
