@@ -29,7 +29,7 @@ jobs:
             if curl -fsS http://127.0.0.1:8765/login -o /tmp/learmingo-login.html; then break; fi
             sleep 1
           done
-          grep -q 'csrf' /tmp/learmingo-login.html
+          grep -q 'name="_token"' /tmp/learmingo-login.html
           curl -sS -D /tmp/learmingo-headers.txt -o /tmp/learmingo-home.html http://127.0.0.1:8765/
           grep -qi 'content-security-policy:' /tmp/learmingo-headers.txt
           grep -qi 'x-content-type-options: nosniff' /tmp/learmingo-headers.txt
