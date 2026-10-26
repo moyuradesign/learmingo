@@ -21,6 +21,8 @@ jobs:
         run: php tests/route_imports.php
       - name: Learning route workflow regression
         run: php tests/learning_routes.php
+      - name: Frontend home and route integration regression
+        run: php tests/frontend_home_v104.php
       - name: Security regression checks
         run: php tests/security.php
       - name: Environment loader compatibility

@@ -1,0 +1,5 @@
+<section class="lm-page-hero"><div class="lm-container"><span class="lm-eyebrow">Browse by interest</span><h1 class="lm-page-title">Find your field of interest.</h1><p class="lm-page-subtitle">Explore every topic and discover courses that match your goals.</p></div></section>
+<section class="lm-section lm-section-soft"><div class="lm-container"><div class="lm-category-grid">
+<?php foreach ($categories as $cat): ?><a class="lm-category-card" href="/courses?category=<?= rawurlencode((string)$cat['slug']) ?>"><span class="lm-category-symbol" aria-hidden="true">↗</span><h2><?= e($cat['name']) ?></h2><p><?= (int)$cat['course_count'] ?> <?= (int)$cat['course_count']===1?'course':'courses' ?></p><span class="lm-category-arrow" aria-hidden="true">→</span></a><?php endforeach; ?>
+<?php if (!$categories): ?><div class="lm-empty"><div class="lm-empty-icon">◈</div><h2>Topics are coming soon.</h2><p>New categories will appear here as courses are added.</p><a class="lm-button lm-button-primary" href="/courses">Browse courses</a></div><?php endif; ?>
+</div></div></section>

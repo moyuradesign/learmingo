@@ -1,47 +1,78 @@
-<section class="lm-hero">
-  <div class="lm-container lm-hero-grid">
-    <div>
-      <span class="lm-eyebrow">Learning that fits your life</span>
-      <h1>Grow your skills.<br><span>Unlock what’s next.</span></h1>
-      <p class="lm-hero-description">Discover practical courses built for real progress. Learn from instructors, move at your own pace, and turn curiosity into confidence.</p>
-      <div class="lm-hero-actions"><a class="lm-button lm-button-primary" href="/courses">Explore courses <span aria-hidden="true">↗</span></a><a class="lm-button lm-button-outline" href="/#how-it-works">See how it works <span aria-hidden="true">→</span></a></div>
-      <div class="lm-hero-caption"><span>Learn at your own pace</span><span>Practical, focused lessons</span></div>
-    </div>
-    <div class="lm-showcase" aria-label="Illustration of the Learmingo learning experience">
-      <div class="lm-preview">
-        <div class="lm-preview-top"><div class="d-flex gap-3 align-items-center"><span class="lm-preview-icon" aria-hidden="true">✦</span><div><span class="lm-preview-kicker">Your learning space</span><h3>Make progress every day</h3></div></div><span class="lm-preview-tag">Self-paced</span></div>
-        <div class="lm-preview-panel">
-          <h4>A learning journey, made simple.</h4>
-          <div class="lm-preview-lesson"><span class="lm-preview-play" aria-hidden="true">▶</span><div><strong>Discover a skill you love</strong><small>Find your next course</small></div></div>
-          <div class="lm-preview-lesson"><span class="lm-preview-play" aria-hidden="true">✎</span><div><strong>Learn one step at a time</strong><small>Move at a pace that works for you</small></div></div>
-          <div class="lm-preview-lesson"><span class="lm-preview-play" aria-hidden="true">★</span><div><strong>Build practical confidence</strong><small>Put new knowledge to work</small></div></div>
+<?php
+/** LEARMINGO_COURSE_FIRST_HOME_V104 — catalog-first homepage. */
+$front = \Learmingo\Services\FrontendSettings::all();
+$categories = $categories ?? [];
+$isDemo = !empty($previewMode);
+$heroTitle = trim((string)($front['hero_title'] ?? 'Learn skills that move you forward.'));
+if ($heroTitle === 'Learn something remarkable.') { $heroTitle = 'Learn skills that move you forward.'; }
+$highlight = $heroTitle === 'Learn skills that move you forward.';
+?>
+<div class="lm4-home" data-release="LEARMINGO_COURSE_FIRST_HOME_V104">
+  <section class="lm4-hero" aria-labelledby="lm4-hero-heading">
+    <div class="lm-container lm4-hero-grid">
+      <div class="lm4-hero-content">
+        <span class="lm4-hero-eyebrow"><span aria-hidden="true">●</span><?= e($front['hero_eyebrow']) ?></span>
+        <h1 id="lm4-hero-heading"><?php if ($highlight): ?>Learn skills that<br>move you <span>forward.</span><?php else: ?><?= e($heroTitle) ?><?php endif; ?></h1>
+        <p><?= e($front['hero_subtitle']) ?></p>
+        <div class="lm4-hero-actions">
+          <a class="lm4-button lm4-button-primary" href="<?= e($front['hero_button_url']) ?>"><?= e($front['hero_button']) ?> <span aria-hidden="true">→</span></a>
+          <a class="lm4-button lm4-button-secondary" href="/categories">Browse categories <span aria-hidden="true">→</span></a>
         </div>
-        <div class="lm-preview-progress"><div class="d-flex justify-content-between"><strong class="small">Your next chapter starts here</strong><span class="small lm-muted">Keep going</span></div><div class="lm-preview-progress-track"><span></span></div></div>
+        <ul class="lm4-hero-highlights" aria-label="Explore Learmingo">
+          <li><span class="lm4-hi-icon" aria-hidden="true">✧</span><span><b>Learn practical skills</b><small>Find your next course</small></span></li>
+          <li><span class="lm4-hi-icon" aria-hidden="true">◷</span><span><b>Flexible learning</b><small>Progress at your pace</small></span></li>
+          <li><span class="lm4-hi-icon" aria-hidden="true">▤</span><span><b>Build your future</b><small>Explore by subject</small></span></li>
+        </ul>
       </div>
-      <div class="lm-float-chip"><span aria-hidden="true">✦</span> Small steps. Real growth.</div>
+      <div class="lm4-hero-media">
+        <img src="/learmingo-hero-art?v=1.0.4" width="900" height="486" alt="Learner holding a laptop, with illustrations representing new skills and progress" decoding="async" fetchpriority="high">
+      </div>
     </div>
-  </div>
-</section>
-<section class="lm-section" id="how-it-works">
-  <div class="lm-container">
-    <div class="text-center mb-5"><span class="lm-eyebrow">Why Learmingo</span><h2 class="lm-section-heading mt-3">Everything you need to keep learning.</h2><p class="lm-section-description mx-auto mt-3">A thoughtfully simple experience that helps you focus on the skills that matter.</p></div>
-    <div class="lm-feature-grid">
-      <article class="lm-feature-card"><span class="lm-feature-icon" aria-hidden="true">⌕</span><h3>Find your next skill</h3><p>Explore courses from instructors and discover subjects aligned with your goals.</p></article>
-      <article class="lm-feature-card"><span class="lm-feature-icon" aria-hidden="true">▷</span><h3>Learn on your schedule</h3><p>Learn at your own pace and return to your courses whenever you’re ready.</p></article>
-      <article class="lm-feature-card"><span class="lm-feature-icon" aria-hidden="true">↗</span><h3>Keep moving forward</h3><p>Follow your enrolled courses and see how far your learning journey has come.</p></article>
+  </section>
+  <section class="lm4-featured" id="featured-courses" aria-labelledby="lm4-featured-heading">
+    <div class="lm-container">
+      <div class="lm4-section-header">
+        <div><span class="lm4-section-eyebrow">Explore learning</span><h2 id="lm4-featured-heading"><?= e($front['featured_title'] === 'Find your next opportunity' ? 'Featured Courses' : $front['featured_title']) ?></h2><p><?= e($front['featured_subtitle'] === 'A thoughtful collection of courses to help you move forward.' ? 'Discover courses to build practical skills.' : $front['featured_subtitle']) ?></p></div>
+        <a class="lm4-text-button" href="/courses">View all courses <span aria-hidden="true">→</span></a>
+      </div>
+      <?php if ($isDemo): ?><p class="lm4-demo-disclaimer"><span aria-hidden="true">ⓘ</span> Example courses for layout preview only. Enrollment is not available.</p><?php endif; ?>
+      <?php if (!$courses): ?>
+        <div class="lm4-empty"><h3>Our course library is growing.</h3><p>Explore the categories or return when new courses are published.</p><a class="lm4-button lm4-button-primary" href="/courses">Browse courses</a></div>
+      <?php else: ?>
+        <div class="lm4-course-grid">
+          <?php foreach ($courses as $course): ?>
+          <article class="lm4-course-card">
+            <a class="lm4-course-image" href="/course?slug=<?= rawurlencode((string)$course['slug']) ?>" aria-label="View <?= e((string)$course['title']) ?>">
+              <img src="/learmingo-course-cover?slug=<?= rawurlencode((string)$course['slug']) ?>" alt="<?= e((string)($course['category_name'] ?? 'Course')) ?> course artwork" width="640" height="360" loading="lazy" decoding="async">
+              <span class="lm4-course-category"><?= e((string)($course['category_name'] ?? 'Course')) ?></span>
+            </a>
+            <div class="lm4-course-body">
+              <h3><a href="/course?slug=<?= rawurlencode((string)$course['slug']) ?>"><?= e((string)$course['title']) ?></a></h3>
+              <p class="lm4-course-desc"><?= e((string)($course['description'] ?? '')) ?></p>
+              <div class="lm4-course-instructor"><span class="lm4-avatar" aria-hidden="true"><?= e(strtoupper(substr((string)($course['instructor'] ?? 'L'),0,1))) ?></span><span><?= e((string)($course['instructor'] ?? 'Learmingo')) ?></span></div>
+              <div class="lm4-course-bottom"><span class="lm4-course-meta"><?php if (!empty($course['lessons'])): ?><?= e((string)$course['lessons']) ?> · <?php endif; ?><?= e((string)($course['level'] ?? 'Self-paced')) ?></span><strong><?= (float)($course['price'] ?? 0) <= 0 ? 'Free' : '$'.e(number_format((float)$course['price'],2)) ?></strong></div>
+            </div>
+          </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </div>
-  </div>
-</section>
-<section class="lm-section lm-section-soft">
-  <div class="lm-container">
-    <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-4"><div><span class="lm-eyebrow">Explore learning</span><h2 class="lm-section-heading mt-3 mb-2">Featured courses</h2><p class="lm-section-description mb-0">Discover what you can learn next.</p></div><a class="lm-button lm-button-outline" href="/courses">View all courses <span aria-hidden="true">→</span></a></div>
-    <?php if (!$courses): ?>
-      <div class="lm-empty"><div class="lm-empty-icon" aria-hidden="true">▤</div><h3>Exciting courses are on their way.</h3><p>Our course collection is being prepared. Explore the catalogue again soon.</p><a class="lm-button lm-button-outline mt-2" href="/courses">Browse the catalogue</a></div>
-    <?php else: ?><div class="lm-course-grid">
-      <?php foreach ($courses as $course): ?><article class="lm-course-card">
-        <div class="lm-course-art"><span class="lm-course-art-icon" aria-hidden="true">✦</span></div><div class="lm-course-content"><span class="lm-course-kicker">Self-paced course</span><h3 class="lm-course-title"><a href="/course?slug=<?= urlencode($course['slug']) ?>"><?= e($course['title']) ?></a></h3><p class="small lm-muted mb-2">By <?= e($course['instructor']) ?></p><p class="lm-course-description"><?= e(substr((string)$course['description'], 0, 120)) ?></p><div class="lm-course-meta"><strong><?= (float)$course['price'] <= 0 ? 'Free' : '$' . e(number_format((float)$course['price'], 2)) ?></strong><a href="/course?slug=<?= urlencode($course['slug']) ?>">View course →</a></div></div>
-      </article><?php endforeach; ?>
-    </div><?php endif; ?>
-  </div>
-</section>
-<section class="lm-section"><div class="lm-container"><div class="lm-cta"><div><h2>Your next skill is waiting.</h2><p>Start exploring today and make room for your next achievement.</p></div><a href="/register" class="lm-button lm-button-light">Create a free account <span aria-hidden="true">→</span></a></div></div></section>
+  </section>
+  <section class="lm4-categories" id="browse-categories" aria-labelledby="lm4-categories-heading">
+    <div class="lm-container">
+      <div class="lm4-section-header"><div><span class="lm4-section-eyebrow">Find your subject</span><h2 id="lm4-categories-heading">Browse by Category</h2><p>Explore courses by topic and find what fits your goals.</p></div><a class="lm4-text-button" href="/categories">View all categories <span aria-hidden="true">→</span></a></div>
+      <?php if ($categories): ?>
+        <div class="lm4-category-grid">
+          <?php $icons = ['web-development'=>'⌘','design'=>'✿','business'=>'▥','data-science'=>'▤','mobile-development'=>'▦','technology'=>'☁','personal-development'=>'♡','languages'=>'◎','creative-arts'=>'◈','photography'=>'▧']; ?>
+          <?php foreach ($categories as $category): ?>
+            <a class="lm4-category-card" href="/courses?category=<?= rawurlencode((string)$category['slug']) ?>">
+              <span class="lm4-cat-icon" aria-hidden="true"><?= e($icons[$category['slug']] ?? '✧') ?></span>
+              <span class="lm4-cat-copy"><strong><?= e((string)$category['name']) ?></strong><small><?= (int)($category['course_count'] ?? $category['total'] ?? 0) ?> <?= (int)($category['course_count'] ?? $category['total'] ?? 0) === 1 ? 'course' : 'courses' ?></small></span>
+              <span class="lm4-cat-arrow" aria-hidden="true">↗</span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?><p class="lm4-category-empty">Categories will appear here as courses are added.</p><?php endif; ?>
+    </div>
+  </section>
+</div>
