@@ -32,6 +32,40 @@
     <?php foreach ($sections as $section): ?>
       <div class="lm-panel mb-4"><div class="lm-panel-body">
         <h3 class="lm-panel-title"><?= e($section['title']) ?></h3>
+
+        <?php if ($editable): ?>
+          <details class="mb-3"><summary class="fw-semibold">Section settings, order and removal</summary>
+            <form method="post" action="/instructor/curriculum/change" class="mt-3 mb-2">
+              <?= csrf_field() ?>
+              <input type="hidden" name="operation" value="rename_section">
+              <input type="hidden" name="item_id" value="<?= (int)$section['id'] ?>">
+              <label class="form-label">Section title</label>
+              <div class="d-flex gap-2">
+                <input class="form-control" name="title" maxlength="200" value="<?= e($section['title']) ?>" required>
+                <button type="submit" class="lm-button lm-button-outline">Rename</button>
+              </div>
+            </form>
+            <div class="d-flex gap-2 flex-wrap">
+              <?php foreach (['up' => '↑ Move up', 'down' => '↓ Move down'] as $direction => $label): ?>
+                <form method="post" action="/instructor/curriculum/change">
+                  <?= csrf_field() ?><input type="hidden" name="operation" value="move_section">
+                  <input type="hidden" name="item_id" value="<?= (int)$section['id'] ?>">
+                  <input type="hidden" name="direction" value="<?= e($direction) ?>">
+                  <button type="submit" class="lm-button lm-button-outline"><?= e($label) ?></button>
+                </form>
+              <?php endforeach; ?>
+            </div>
+            <form class="mt-3" method="post" action="/instructor/curriculum/change">
+              <?= csrf_field() ?>
+              <input type="hidden" name="operation" value="delete_section">
+              <input type="hidden" name="item_id" value="<?= (int)$section['id'] ?>">
+              <label class="form-label">Delete this section and all its lessons (permanent). Type DELETE.</label>
+              <input class="form-control mb-2" name="confirm" pattern="DELETE" autocomplete="off" required>
+              <button class="lm-button lm-button-outline" type="submit">Delete section</button>
+            </form>
+          </details>
+        <?php endif; ?>
+
         <?php if (!$section['lessons']): ?><p class="lm-muted small">This section has no lessons yet.</p><?php endif; ?>
         <?php foreach ($section['lessons'] as $lesson): ?>
           <details class="lm-lesson-card mb-2">
@@ -50,6 +84,26 @@
                   <input class="form-control mb-3" name="video_url" maxlength="500" type="url" value="<?= e((string)$lesson['video_url']) ?>" placeholder="https://...">
                   <button class="lm-button lm-button-primary" type="submit">Save lesson</button>
                 </form>
+
+                <div class="d-flex gap-2 flex-wrap mt-3">
+                  <?php foreach (['up'=>'↑ Lesson up','down'=>'↓ Lesson down'] as $direction=>$label): ?>
+                    <form method="post" action="/instructor/curriculum/change">
+                      <?= csrf_field() ?><input type="hidden" name="operation" value="move_lesson">
+                      <input type="hidden" name="item_id" value="<?= (int)$lesson['id'] ?>">
+                      <input type="hidden" name="direction" value="<?= e($direction) ?>">
+                      <button class="lm-button lm-button-outline" type="submit"><?= e($label) ?></button>
+                    </form>
+                  <?php endforeach; ?>
+                </div>
+                <form class="mt-3" method="post" action="/instructor/curriculum/change">
+                  <?= csrf_field() ?>
+                  <input type="hidden" name="operation" value="delete_lesson">
+                  <input type="hidden" name="item_id" value="<?= (int)$lesson['id'] ?>">
+                  <label class="form-label">Delete lesson permanently (only before enrollment). Type DELETE.</label>
+                  <input class="form-control mb-2" name="confirm" pattern="DELETE" required autocomplete="off">
+                  <button class="lm-button lm-button-outline" type="submit">Delete lesson</button>
+                </form>
+
               <?php else: ?>
                 <p class="lm-muted"><?= e(mb_strimwidth((string)$lesson['content'], 0, 240, '…')) ?></p>
               <?php endif; ?>
