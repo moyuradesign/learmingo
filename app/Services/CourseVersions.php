@@ -27,6 +27,22 @@ final class CourseVersions
         }
     }
 
+    private function author(int $actorId): void
+    {
+        $q=$this->db->prepare("SELECT r.slug FROM lm_users u JOIN lm_roles r ON r.id=u.role_id WHERE u.id=:id AND u.status='active'");
+        $q->execute(['id'=>$actorId]);
+        if (!in_array($q->fetchColumn(),['instructor','admin'],true)) {
+            throw new RuntimeException('Instructor permissions required.');
+        }
+    }
+
+    private function validateDigest(array $draft): void
+    {
+        if (!hash_equals((string)$draft['snapshot_sha256'],hash('sha256',(string)$draft['snapshot_json']))) {
+            throw new RuntimeException('Revision snapshot integrity mismatch.');
+        }
+    }
+
     private function lockedCourse(int $courseId): array
     {
         $q=$this->db->prepare('SELECT id,instructor_id,title,slug,status,price FROM lm_courses WHERE id=:id FOR UPDATE');
@@ -240,7 +256,7 @@ final class CourseVersions
         $this->db->beginTransaction();
         try {
             $course=$this->lockedCourse($courseId);
-            $this->role($ownerId,'instructor');
+            $this->author($ownerId);
             if ((int)$course['instructor_id']!==$ownerId || $course['status']!=='published') {
                 throw new RuntimeException('Only the active course instructor may propose a revision.');
             }
@@ -278,6 +294,7 @@ final class CourseVersions
     {
         $this->db->beginTransaction();
         try {
+            $this->author($ownerId);
             $q=$this->db->prepare('SELECT d.*,c.instructor_id,c.status course_status FROM lm_course_revision_drafts d
                 JOIN lm_courses c ON c.id=d.course_id WHERE d.id=:id FOR UPDATE');
             $q->execute(['id'=>$revisionId]);
@@ -287,6 +304,7 @@ final class CourseVersions
                 || $draft['course_status']!=='published') {
                 throw new RuntimeException('Revision cannot be edited.');
             }
+            $this->validateDigest($draft);
             $arr=json_decode($draft['snapshot_json'],true,flags:JSON_THROW_ON_ERROR);
             if ($index<0 || !array_key_exists($index,$arr)) {
                 throw new \InvalidArgumentException('Lesson index does not exist.');
@@ -306,12 +324,14 @@ final class CourseVersions
     {
         $this->db->beginTransaction();
         try {
-            $q=$this->db->prepare("SELECT d.id,d.course_id,d.base_version_id,d.snapshot_json,d.state,c.instructor_id,c.status course_status
+            $this->author($ownerId);
+            $q=$this->db->prepare("SELECT d.id,d.course_id,d.base_version_id,d.snapshot_json,d.snapshot_sha256,d.state,c.instructor_id,c.status course_status
                 FROM lm_course_revision_drafts d JOIN lm_courses c ON c.id=d.course_id WHERE d.id=:id FOR UPDATE");
             $q->execute(['id'=>$revisionId]);
             $d=$q->fetch(PDO::FETCH_ASSOC);
             if (!$d || $d['state']!=='draft' || (int)$d['instructor_id']!==$ownerId
                 || $d['course_status']!=='published') { throw new RuntimeException('Cannot submit revision.'); }
+            $this->validateDigest($d);
             $this->canonical(json_decode($d['snapshot_json'],true,flags:JSON_THROW_ON_ERROR));
             $latest=$this->latest((int)$d['course_id']);
             if (!$latest || (int)$latest['id']!==(int)$d['base_version_id']) {
@@ -337,7 +357,7 @@ final class CourseVersions
             $get->execute(['id'=>$revisionId]);
             $courseId=(int)$get->fetchColumn();
             $course=$this->lockedCourse($courseId);
-            $q=$this->db->prepare('SELECT id,base_version_id,snapshot_json,state FROM lm_course_revision_drafts WHERE id=:id AND course_id=:course FOR UPDATE');
+            $q=$this->db->prepare('SELECT id,base_version_id,snapshot_json,snapshot_sha256,state FROM lm_course_revision_drafts WHERE id=:id AND course_id=:course FOR UPDATE');
             $q->execute(['id'=>$revisionId,'course'=>$courseId]);
             $d=$q->fetch(PDO::FETCH_ASSOC);
             if (!$d || $d['state']!=='pending' || $course['status']!=='published') {
@@ -345,6 +365,7 @@ final class CourseVersions
             }
             $version=null;
             if ($decision==='approve') {
+                $this->validateDigest($d);
                 $last=$this->latest($courseId);
                 if (!$last || (int)$last['id']!==(int)$d['base_version_id']) {
                     throw new RuntimeException('Revision base changed. Approval denied.');
