@@ -285,6 +285,7 @@ $deny(fn()=>$assess->revokeCertificate($a,(int)$issued['id'],'Not an administrat
 $deny(fn()=>$assess->revokeCertificate($admin,(int)$issued['id'],'Short'),'insufficient revocation reason');
 $assess->revokeCertificate($admin,(int)$issued['id'],'Verified invalid certificate issuance');
 $check($assess->verifyCredential($issued['credential'])===null,'revoked certificate no longer verifies');
+$deny(fn()=>$assess->issueCertificate($learner,$id),'revoked certificate cannot be reissued');
 $deny(fn()=>$assess->revokeCertificate($admin,(int)$issued['id'],'Another invalid reason'),'duplicate revocation denied');
 $revoked=(int)$pdo->query('SELECT COUNT(*) FROM lm_certificate_revocations')->fetchColumn();
 $check($revoked===1,'revocation ledger is append-only');
