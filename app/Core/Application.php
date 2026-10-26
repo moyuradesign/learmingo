@@ -16,7 +16,6 @@ final class Application
     {
         require_once $basePath . '/bootstrap/autoload.php';
         require_once $basePath . '/app/Helpers/functions.php';
-        Security::sendHeaders();
         ini_set('display_errors', '0');
         set_exception_handler(static function (\Throwable $exception): void {
             error_log('Learmingo unhandled exception: ' . get_class($exception));
@@ -25,6 +24,8 @@ final class Application
             }
         });
         Session::start();
+        // PHP's session cache limiter may replace Cache-Control during session_start.
+        Security::sendHeaders();
         $app = new self($basePath);
         require $basePath . '/routes/web.php';
         return $app;

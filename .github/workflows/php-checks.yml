@@ -21,7 +21,7 @@ jobs:
         run: php tests/security.php
       - name: HTTP smoke test
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           php -S 127.0.0.1:8765 -t public tests/http_router.php >/tmp/learmingo-http.log 2>&1 &
           PID=$!
           trap 'kill "$PID" 2>/dev/null || true' EXIT
