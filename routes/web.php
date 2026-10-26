@@ -165,3 +165,6 @@ require __DIR__ . '/learning.php';
 
 // Milestone 3 learning management adapters.
 require __DIR__ . '/milestone3.php';
+
+// LEARMINGO_PREMIUM_FRONTEND_V101 — course-first UI, asset bridge and demo catalogue.
+require __DIR__ . '/frontend.php';
