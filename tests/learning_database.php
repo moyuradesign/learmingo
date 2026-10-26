@@ -4,6 +4,9 @@ require dirname(__DIR__) . '/bootstrap/autoload.php';
 
 use Learmingo\Services\LearningCore;
 use Learmingo\Infrastructure\MigrationRunner;
+use Learmingo\Services\InstructorApplications;
+use Learmingo\Services\AssessmentService;
+use Learmingo\Services\CourseVersions;
 
 if (getenv('LEARNING_TEST_DB_NAME') !== 'learning_ci') {
     throw new RuntimeException('Refusing a non-disposable database.');
@@ -147,3 +150,91 @@ $lessonAudit = array_values(array_filter($events,static fn($e)=>$e['action']==='
 $check(count($lessonAudit)===1,'duplicate completion does not duplicate audit');
 $check((int)$lessonAudit[0]['actor_id']===$s,'audit actor is authenticated student');
 echo "Learmingo database-backed learning core and audit checks passed.\n";
+
+/* Milestone 3: instructor access, version pinning, grading and certificates. */
+$applications=new InstructorApplications($pdo);
+$candidate=$user('student','candidate@invalid.test');
+$deny(fn()=>$applications->apply($candidate,'Too short'),'minimum application statement');
+$applications->apply($candidate,str_repeat('Teaching experience. ',4));
+$state=$applications->mine($candidate);
+$check($state['status']==='pending','application pending');
+$deny(fn()=>$applications->apply($candidate,str_repeat('Duplicate pending. ',3)),'cannot duplicate pending application');
+$deny(fn()=>$applications->review($a,(int)$state['id'],'approve',''),'instructor cannot approve applications');
+$applications->review($admin,(int)$state['id'],'reject','Please describe your lessons.');
+$check($applications->mine($candidate)['status']==='rejected','application rejection');
+$applications->apply($candidate,str_repeat('Second application. ',4));
+$applications->review($admin,(int)$state['id'],'approve','Approved');
+$check($applications->mine($candidate)['status']==='approved','instructor approval');
+$check((int)$pdo->query("SELECT role_id FROM lm_users WHERE id=$candidate")->fetchColumn()===(int)$roles['instructor'],'role promotion');
+
+/* A course's published baseline can be backfilled without changing its
+ * existing course lessons or moving an already enrolled student to v2. */
+$versions=new CourseVersions($pdo);
+$baseline=$versions->establishBaseline($admin,$id);
+$check((int)$versions->latestVersion($id)['version_no']===1,'version 1 baseline');
+$deny(fn()=>$versions->establishBaseline($admin,$id),'second baseline denied');
+$check((int)$pdo->query("SELECT COUNT(*) FROM lm_enrollment_versions WHERE version_id=$baseline")->fetchColumn()===1,'historical enrollment pinned');
+$oldProgress=(int)$pdo->query("SELECT COUNT(*) FROM lm_version_lesson_progress p
+ JOIN lm_enrollment_versions ev ON ev.enrollment_id=p.enrollment_id WHERE ev.version_id=$baseline")->fetchColumn();
+$check($oldProgress===2,'historical completed lessons mapped');
+$learner=$user('student','versionedlearner@invalid.test');
+$versions->enrollFree($learner,$id);
+$before=$versions->classroom($learner,'first-course');
+$check(count($before['lessons'])===2,'snapshot classroom has two lessons');
+$versionLesson=(int)$before['lessons'][0]['version_lesson_id'];
+$check($before['lessons'][0]['completed_at']===null,'new enrollment has no completions');
+$deny(fn()=>$core->completeLesson($learner,$l1),'legacy write blocked for pinned learner');
+$versions->completeVersionLesson($learner,$versionLesson);
+$versions->completeVersionLesson($learner,$versionLesson);
+$percentage=(float)$pdo->query("SELECT progress FROM lm_enrollments WHERE student_id=$learner AND course_id=$id")->fetchColumn();
+$check($percentage===50.0,'versioned learner half done');
+$revised=$versions->createRevision($a,$id);
+$deny(fn()=>$versions->editRevisionLesson($b,$revised,0,'Hijacked','No',''),'cross-owner revision denied');
+$versions->editRevisionLesson($a,$revised,0,'Updated for version two','Fresh learning content','');
+$versions->submitRevision($a,$revised);
+$deny(fn()=>$versions->editRevisionLesson($a,$revised,0,'Too late','No',''),'pending revision frozen');
+$deny(fn()=>$versions->reviewRevision($b,$revised,'approve'),'review requires admin');
+$versionTwo=$versions->reviewRevision($admin,$revised,'approve');
+$check((int)$versions->latestVersion($id)['version_no']===2,'new immutable version published');
+$check((int)$versions->classroom($learner,'first-course')['course']['version_id']===$baseline,'original enrollment pinned v1');
+$check($versions->classroom($learner,'first-course')['lessons'][0]['title']!=='Updated for version two','v1 content never changed');
+$learner2=$user('student','laterlearner@invalid.test');
+$versions->enrollFree($learner2,$id);
+$latestClass=$versions->classroom($learner2,'first-course');
+$check((int)$latestClass['course']['version_id']===(int)$versionTwo,'later enrollment pinned v2');
+$check($latestClass['lessons'][0]['title']==='Updated for version two','v2 content visible');
+$check($versions->classroom($learner,'first-course')['lessons'][0]['title']!=='Updated for version two','v1 remains original after v2');
+$check(count($versions->pendingRevisions($admin))===0,'no pending revisions after approval');
+
+/* All quiz grading is computed from immutable published questions and an
+ * authenticated student enrollment. User-supplied scores are never accepted. */
+$assess=new AssessmentService($pdo);
+$quiz=$assess->createQuiz($a,$id,'Final exam',60,2);
+$deny(fn()=>$assess->addQuestion($b,$quiz,'Cross tenant question',['a'=>'One','b'=>'Two','c'=>'Three','d'=>'Four'],'a',1),'foreign instructor question denied');
+$q1=$assess->addQuestion($a,$quiz,'Question number one',['a'=>'Correct','b'=>'Incorrect','c'=>'Choice C','d'=>'Choice D'],'a',1);
+$q2=$assess->addQuestion($a,$quiz,'Question number two',['a'=>'Incorrect','b'=>'Correct','c'=>'Choice C','d'=>'Choice D'],'b',1);
+$assess->publishQuiz($a,$quiz);
+$deny(fn()=>$assess->addQuestion($a,$quiz,'No edits after publish',['a'=>'One','b'=>'Two','c'=>'Three','d'=>'Four'],'a',1),'published quiz immutable');
+$deny(fn()=>$assess->submit($candidate,$quiz,[$q1=>'a',$q2=>'b']),'not enrolled cannot grade');
+$deny(fn()=>$assess->submit($learner,$quiz,[$q1=>'a']),'partial assessment denied');
+$failed=$assess->submit($learner,$quiz,[$q1=>'b',$q2=>'b']);
+$check($failed['passed']===false && (float)$failed['score']===50.0,'incorrect answers graded at 50');
+$success=$assess->submit($learner,$quiz,[$q1=>'a',$q2=>'b']);
+$check($success['passed']===true && (float)$success['score']===100.0,'correct answers graded at 100');
+$deny(fn()=>$assess->submit($learner,$quiz,[$q1=>'a',$q2=>'b']),'attempt limit and pass lock');
+$deny(fn()=>$assess->issueCertificate($learner,$id),'certificate requires course completion');
+$versions->completeVersionLesson($learner,(int)$before['lessons'][1]['version_lesson_id']);
+$issued=$assess->issueCertificate($learner,$id);
+$check(strlen($issued['credential'])===64,'unguessable credential');
+$check($assess->issueCertificate($learner,$id)['credential']===$issued['credential'],'certificate issuance idempotent');
+$verified=$assess->verifyCredential($issued['credential']);
+$check($verified!==null && $verified['course_title']==='first-course','credential verification');
+$check($assess->verifyCredential(str_repeat('a',64))===null,'unknown credential rejected');
+$check($assess->verifyCredential('../bad')===null,'malformed credential rejected');
+$events=$pdo->query("SELECT action FROM lm_audit_events")->fetchAll(PDO::FETCH_COLUMN);
+foreach (['instructor.application.approved','assessment.quiz.graded','learning.certificate.issued',
+ 'curriculum.version.published','curriculum.revision.approved','learning.version_lesson.completed'] as $action) {
+    $check(in_array($action,$events,true),'missing milestone3 audit '.$action);
+}
+echo "Learmingo milestone 3 database checks passed.\n";
+
