@@ -79,7 +79,7 @@ $router->post('/register', static function () use ($render,$input): void {
 
 $router->post('/logout', static function (): void { if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request',419); return; } Auth::logout(); Response::redirect('/'); });
 
-$router->get('/dashboard', static function () use ($requireAuth,$render): void { $user=$requireAuth(); $s=Database::connection()->prepare('SELECT e.progress,e.status,c.title,c.slug FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:id ORDER BY e.created_at DESC');$s->execute(['id'=>$user['id']]);$render('dashboard/index',['enrollments'=>$s->fetchAll()]); });
+$router->get('/dashboard', static function () use ($requireAuth,$render): void { $user=$requireAuth(); $s=Database::connection()->prepare('SELECT e.progress,e.status,c.title,c.slug FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:id AND e.status<>'cancelled' ORDER BY e.created_at DESC');$s->execute(['id'=>$user['id']]);$render('dashboard/index',['enrollments'=>$s->fetchAll()]); });
 $router->post('/enroll', static function () use ($requireAuth): void {
     $user = $requireAuth();
     if (!Csrf::verify($_POST['_token'] ?? null)) { Response::html('Invalid request',419); return; }
@@ -132,8 +132,8 @@ $router->post('/instructor/courses/store', static function () use ($requireRole,
     }
     try {
         $s = Database::connection()->prepare('INSERT INTO lm_courses (instructor_id,title,slug,description,price,status) VALUES (:instructor,:title,:slug,:description,:price,:status)');
-        $s->execute(['instructor'=>$user['id'],'title'=>$title,'slug'=>$slug,'description'=>$description,'price'=>round((float)$rawPrice,2),'status'=>$user['role']==='admin'?'published':'pending']);
-        Response::redirect('/instructor');
+        $s->execute(['instructor'=>$user['id'],'title'=>$title,'slug'=>$slug,'description'=>$description,'price'=>round((float)$rawPrice,2),'status'=>'draft']);
+        Response::redirect('/instructor/course?course=' . (int)Database::connection()->lastInsertId());
     } catch (Throwable $e) {
         error_log('Learmingo course creation failed: '.get_class($e));
         $render('instructor/course-form',['course'=>null,'error'=>'Unable to create course. The slug may already exist.']);
@@ -151,7 +151,10 @@ $router->get('/learn', static function () use ($requireAuth, $render): void {
         Response::html('Course not found or access denied', 404);
         return;
     }
-    $lessonsQuery = $db->prepare('SELECT s.title section_title,l.id,l.title,l.content,l.video_url FROM lm_course_sections s INNER JOIN lm_lessons l ON l.section_id=s.id WHERE s.course_id=:course ORDER BY s.sort_order,s.id,l.sort_order,l.id');
-    $lessonsQuery->execute(['course' => $course['id']]);
+    $lessonsQuery = $db->prepare('SELECT s.title section_title,l.id,l.title,l.content,l.video_url,lp.completed_at FROM lm_course_sections s INNER JOIN lm_lessons l ON l.section_id=s.id LEFT JOIN lm_lesson_progress lp ON lp.lesson_id=l.id AND lp.student_id=:student WHERE s.course_id=:course ORDER BY s.sort_order,s.id,l.sort_order,l.id');
+    $lessonsQuery->execute(['course' => $course['id'], 'student' => $user['id']]);
     $render('dashboard/learn', ['course' => $course, 'lessons' => $lessonsQuery->fetchAll()]);
 });
+
+// Learning core workflows live in a separate HTTP adapter.
+require __DIR__ . '/learning.php';
