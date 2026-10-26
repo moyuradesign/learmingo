@@ -243,3 +243,49 @@ foreach (['instructor.application.approved','assessment.quiz.graded','learning.c
 }
 echo "Learmingo milestone 3 database checks passed.\n";
 
+
+
+/* Milestone 3+: true/false and exact-set multi-select, instructor-gradebook
+ * scope, learner attempt ownership, certificate revocation and audit. */
+$quiz2=$assess->createQuiz($a,$id,'Applied reasoning',75,3);
+$truth=$assess->addAdvancedQuestion($a,$quiz2,'true_false','The sky can be blue.',
+    ['a'=>'True','b'=>'False','c'=>'Not used','d'=>'Not used'],'a',2,'Weather depends on atmospheric scattering.');
+$multi=$assess->addAdvancedQuestion($a,$quiz2,'multi_select','Select the even numbers.',
+    ['a'=>'Two','b'=>'Three','c'=>'Four','d'=>'Five'],'ca',2,'Two and four are both even.');
+$deny(fn()=>$assess->addAdvancedQuestion($a,$quiz2,'multi_select','Bad choices',
+    ['a'=>'A','b'=>'B','c'=>'C','d'=>'D'],'aa',1),'duplicate answer key forbidden');
+$deny(fn()=>$assess->addAdvancedQuestion($b,$quiz2,'true_false','Not your quiz.',
+    ['a'=>'True','b'=>'False','c'=>'N/A','d'=>'N/A'],'b',1),'other instructor barred');
+$check(count($assess->quizQuestions($quiz2,false))===2,'student question formats available');
+$studentQuestion=$assess->quizQuestions($quiz2,false)[1];
+$check(!array_key_exists('answer_key',$studentQuestion),'answer keys hidden from student');
+$check($studentQuestion['format']==='multi_select','question format exposed');
+$assess->publishQuiz($a,$quiz2);
+$deny(fn()=>$assess->addAdvancedQuestion($a,$quiz2,'multi_select','Locked quiz question',
+    ['a'=>'One','b'=>'Two','c'=>'Three','d'=>'Four'],'ac',1),'advanced quiz immutable');
+$deny(fn()=>$assess->submit($learner2,$quiz2,[$truth=>'a',$multi=>['a','a']]),'duplicate submitted choices rejected');
+$deny(fn()=>$assess->submit($learner2,$quiz2,[$truth=>'a',$multi=>['a']]),'single multi-choice rejected');
+$wrong=$assess->submit($learner2,$quiz2,[$truth=>'a',$multi=>['a','b']]);
+$check($wrong['passed']===false && (float)$wrong['score']===50.0,'multi-select exact set gives no partial credit');
+$correct=$assess->submit($learner2,$quiz2,[$truth=>'a',$multi=>['c','a']]);
+$check($correct['passed']===true && (float)$correct['score']===100.0,'order independent exact multi-select');
+$deny(fn()=>$assess->submit($learner2,$quiz2,[$truth=>'a',$multi=>['a','c']]),'pass locks further attempts');
+$record=$assess->studentAttempt($learner2,(int)$correct['attempt_id']);
+$check($record!==null && count($record['answers'])===2,'student attempt review');
+$selections=array_column($record['answers'],'selection_key','question_id');
+$check($selections[$multi]==='ac','complete multi-selection persisted');
+$check($assess->studentAttempt($learner,(int)$correct['attempt_id'])===null,'other learner cannot read attempt');
+$gradebook=$assess->gradebook($a,$id);
+$check(count($gradebook)>=4,'owned course gradebook');
+$deny(fn()=>$assess->gradebook($b,$id),'other instructor gradebook denied');
+$certificateList=$assess->recentCertificates($admin);
+$check(count($certificateList)>=1,'administrator certificate registry');
+$deny(fn()=>$assess->recentCertificates($a),'instructor cannot read full certificate registry');
+$deny(fn()=>$assess->revokeCertificate($a,(int)$issued['id'],'Not an administrator'),'other role revoke denied');
+$deny(fn()=>$assess->revokeCertificate($admin,(int)$issued['id'],'Short'),'insufficient revocation reason');
+$assess->revokeCertificate($admin,(int)$issued['id'],'Verified invalid certificate issuance');
+$check($assess->verifyCredential($issued['credential'])===null,'revoked certificate no longer verifies');
+$deny(fn()=>$assess->revokeCertificate($admin,(int)$issued['id'],'Another invalid reason'),'duplicate revocation denied');
+$revoked=(int)$pdo->query('SELECT COUNT(*) FROM lm_certificate_revocations')->fetchColumn();
+$check($revoked===1,'revocation ledger is append-only');
+echo "Learmingo advanced assessment and certificate lifecycle checks passed.\n";

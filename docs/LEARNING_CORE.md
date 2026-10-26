@@ -49,3 +49,17 @@ A running deployment MUST apply the audit migration before enabling curriculum m
 ### Guarded rollout
 
 This is a **forward-only migration series**, not an automatically deployed upgrade. Never apply schema changes to the production database before taking and verifying a database backup, reviewing schema drift, and testing the exact release on an isolated staging copy. The old aaPanel QA database has not been updated. Current frontend/browser acceptance, email notifications, cryptographic PDF signing, payment processing, freeform exams, rich question banks, section changes within detached revisions, and comprehensive attempt analytics are not claimed complete.
+
+## Advanced assessment and certificate extensions
+
+- True/false questions and multiple-correct-answer questions are available for **draft** quizzes only. Existing single-choice questions retain their original schema and behavior.
+- Multi-select scoring is exact-set: every correct answer and **no incorrect answers** must be selected. Answers are canonicalized to a stable alphabetical key before grading. No partial credit is awarded; the complete selection is persisted for each attempt.
+- Learner question APIs exclude answer keys and instructor explanations. A learner may review their own submitted selections and earned marks, but cannot inspect another learner's attempts.
+- The instructor gradebook is restricted to courses owned by the logged-in instructor. Gradebook results cannot be edited in place.
+- Certificates have a printable, A4 landscape layout with a **Print / Save as PDF** browser action. This is a browser-generated PDF, not a server-signed PDF.
+- Administrators can revoke issued certificates with a required reason. Revocation is audited, stored in a dedicated ledger, and causes the public verification view to report invalid. Revocation cannot be undone in this milestone.
+- Certificate issuance rules remain: enrollment completed and at least one passing published assessment. Existing historical credentials are not silently regenerated.
+
+### Outstanding gates
+
+These changes extend Milestone 3 but are not yet an aaPanel acceptance result. The consolidated QA release must verify migrations on an isolated backed-up QA schema before application changes, preserve old enrollment version pins, and test authentication, rate limits, assessment permission boundaries, certificate issuance and revocation through HTTP. Do not activate production.
