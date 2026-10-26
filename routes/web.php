@@ -8,7 +8,7 @@ use Learmingo\Core\Response;
 use Learmingo\Core\View;
 
 $router = $app->getRouter();
-$render = static fn(string $view, array $data = []): void => View::render($view, $data);
+$render = static function (string $view, array $data = []): void { View::render($view, $data); };
 $requireAuth = static function (): array { if (!Auth::check()) { Response::redirect('/login'); } return Auth::user() ?? []; };
 $requireRole = static function (string ...$roles): array { if (!Auth::check() || !Auth::role(...$roles)) { Response::html('Forbidden', 403); exit; } return Auth::user() ?? []; };
 
@@ -39,3 +39,19 @@ $router->post('/admin/users/status', static function () use ($requireRole): void
 $router->get('/instructor', static function () use ($requireRole,$render): void { $user=$requireRole('instructor','admin');$s=Database::connection()->prepare('SELECT id,title,slug,price,status FROM lm_courses WHERE instructor_id=:id ORDER BY created_at DESC');$s->execute(['id'=>$user['id']]);$render('instructor/dashboard',['courses'=>$s->fetchAll()]); });
 $router->get('/instructor/courses/create', static function () use ($requireRole,$render): void { $requireRole('instructor','admin');$render('instructor/course-form',['course'=>null,'error'=>null]); });
 $router->post('/instructor/courses/store', static function () use ($requireRole,$render): void { $user=$requireRole('instructor','admin');if(!Csrf::verify($_POST['_token']??null)){ $render('instructor/course-form',['course'=>null,'error'=>'Invalid request.']);return; }$title=trim((string)($_POST['title']??''));$description=trim((string)($_POST['description']??''));$price=max(0,(float)($_POST['price']??0));$slug=trim((string)($_POST['slug']??''));$slug=$slug!==''?$slug:strtolower(trim(preg_replace('/[^a-z0-9]+/i','-', $title),'-'));if($title===''||$slug===''){ $render('instructor/course-form',['course'=>null,'error'=>'Title and slug are required.']);return; }$s=Database::connection()->prepare('INSERT INTO lm_courses (instructor_id,title,slug,description,price,status) VALUES (:instructor,:title,:slug,:description,:price,:status)');try{$s->execute(['instructor'=>$user['id'],'title'=>$title,'slug'=>$slug,'description'=>$description,'price'=>$price,'status'=>Auth::role('admin')?'published':'pending']);Response::redirect('/instructor');}catch(Throwable){$render('instructor/course-form',['course'=>null,'error'=>'The slug must be unique.']);} });
+
+$router->get('/learn', static function () use ($requireAuth, $render): void {
+    $user = $requireAuth();
+    $slug = trim((string) ($_GET['course'] ?? ''));
+    $db = Database::connection();
+    $statement = $db->prepare("SELECT c.id,c.title,c.description,e.progress FROM lm_enrollments e INNER JOIN lm_courses c ON c.id=e.course_id WHERE e.student_id=:student AND c.slug=:slug AND e.status <> 'cancelled' LIMIT 1");
+    $statement->execute(['student' => $user['id'], 'slug' => $slug]);
+    $course = $statement->fetch();
+    if (!$course) {
+        Response::html('Course not found or access denied', 404);
+        return;
+    }
+    $lessonsQuery = $db->prepare('SELECT s.title section_title,l.id,l.title,l.content,l.video_url FROM lm_course_sections s INNER JOIN lm_lessons l ON l.section_id=s.id WHERE s.course_id=:course ORDER BY s.sort_order,s.id,l.sort_order,l.id');
+    $lessonsQuery->execute(['course' => $course['id']]);
+    $render('dashboard/learn', ['course' => $course, 'lessons' => $lessonsQuery->fetchAll()]);
+});
