@@ -8,7 +8,7 @@ function check(bool $ok): void { if (!$ok) { throw new RuntimeException('Asserti
 function rejected(callable $fn): void { try {$fn();} catch (InvalidArgumentException) { return; } throw new RuntimeException('Expected rejection'); }
 try {
     check($store->run()===[]);
-    $input=['title'=>'Quiz acceptance','course'=>'Leadership','assessment'=>'Final quiz','version'=>'v1','environment'=>'staging','rule'=>'Pass 80%','reviewer'=>'QA','evidence'=>'https://example.com/evidence','defects'=>'none','rollback'=>'Restore previous revision','decision'=>'hold','details'=>'Quiz rubric','view'=>'Assessment design','status'=>'planned'];
+    $input=['title'=>'Quiz acceptance','course'=>'Leadership','assessment'=>'Final quiz','version'=>'v1','environment'=>'staging','rule'=>'Pass 80%','reviewer'=>'QA','evidence'=>'https://example.com/evidence','defects'=>'none','rollback'=>'Restore previous revision','decision'=>'hold','details'=>'Quiz rubric','view'=>'Assessment design','status'=>'planned','fields'=>['outcomes'=>'Assess leadership concepts','type'=>'quiz','pass_score'=>'80']];
     rejected(fn()=>$store->run(array_merge($input,['status'=>'approved']),1));
     $items=$store->run($input,1);$item=reset($items);
     $input=array_merge($input,['id'=>$item['id'],'revision'=>1]);
