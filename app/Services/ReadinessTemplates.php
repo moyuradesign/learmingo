@@ -37,9 +37,12 @@ final class ReadinessTemplates
                 if (array_key_exists($key, $fields)) { $fields[$key] = 'pending'; }
             }
             if (array_key_exists('issued_count', $fields)) { $fields['issued_count'] = ''; }
+            $checklist = ReadinessPlanning::checklist($input['checklist'] ?? []);
+            foreach ($checklist as &$task) { $task['done'] = false; }
+            unset($task);
             $id = $old['id'] ?? bin2hex(random_bytes(12));
             $templates[$id] = [
-                'id'=>$id, 'name'=>$name, 'view'=>$view, 'fields'=>$fields,
+                'id'=>$id, 'name'=>$name, 'view'=>$view, 'fields'=>$fields, 'checklist'=>$checklist,
                 'rule'=>ReadinessSchema::text($input, 'rule', 12000),
                 'details'=>ReadinessSchema::text($input, 'details', 12000),
                 'revision'=>($old['revision'] ?? 0)+1, 'actor'=>$actor, 'updated_at'=>gmdate('c'),

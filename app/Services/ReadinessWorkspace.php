@@ -9,7 +9,7 @@ final class ReadinessWorkspace
     public const VIEWS = ['Assessment design', 'Question banks', 'Instructor review', 'Grading and moderation', 'Certificate templates and issuance', 'Course revision history', 'Release readiness'];
     public const STATES = ['planned', 'in progress', 'in review', 'verified', 'approved'];
     private const DESIGN = ['title','course','assessment','version','environment','rule','reviewer','details','view','fields'];
-    private const CONTENT = ['title','course','assessment','version','environment','rule','reviewer','evidence','defects','rollback','decision','details','view','score','fields','status','dependencies'];
+    private const CONTENT = ['title','course','assessment','version','environment','rule','reviewer','evidence','defects','rollback','decision','details','view','score','fields','status','dependencies','work_owner','priority','due_date','checklist','issues'];
 
     public function __construct(private string $path) {}
 
@@ -46,6 +46,7 @@ final class ReadinessWorkspace
                     'status'=>'planned', 'decision'=>'hold', 'evidence'=>'', 'score'=>'',
                     'defects'=>'', 'rollback'=>'', 'fields'=>$snapshot['fields'] ?? [],
                 ]);
+                $input = ReadinessPlanning::resetResults($input);
                 // Historical release acceptance assertions are not reusable proof.
                 if (($input['view'] ?? '') === 'Release readiness') {
                     foreach (ReadinessSchema::views()['Release readiness'] as $key => $definition) {
@@ -53,7 +54,7 @@ final class ReadinessWorkspace
                     }
                 }
             }
-            $item = $this->normalize($input);
+            $item = $this->normalize($input) + ReadinessPlanning::normalize($input);
             $previous = $old['status'] ?? 'planned';
             $from = array_search($previous, self::STATES, true);
             $to = array_search($item['status'], self::STATES, true);
@@ -61,6 +62,7 @@ final class ReadinessWorkspace
                 || ($item['status'] !== $previous && $to !== $from + 1 && $item['status'] !== 'planned')) {
                 throw new \InvalidArgumentException('Follow the workflow in order, or return to planned.');
             }
+            if ($old) { ReadinessPlanning::guardReviewedChanges($item, $old, (int)$from); }
             if ($old && $from >= 2 && $item['status'] !== 'planned') {
                 foreach (self::DESIGN as $key) {
                     $prior = $key === 'fields' ? ReadinessSchema::fields($old['view'], $old['fields'] ?? []) : ($old[$key] ?? '');
@@ -96,6 +98,9 @@ final class ReadinessWorkspace
                 }
             }
             if ($to >= 3) {
+                if (!ReadinessPlanning::complete($item)) {
+                    throw new \InvalidArgumentException('Complete all checklist tasks and resolve every tracked defect with evidence before verification.');
+                }
                 if ($item['evidence'] === '' || $item['rollback'] === '' || $item['defects'] !== 'none' || $item['environment'] === 'production') {
                     throw new \InvalidArgumentException('Verification requires non-production evidence, rollback notes and resolved defects (enter “none”).');
                 }
@@ -210,6 +215,7 @@ final class ReadinessWorkspace
 
     private static function acceptedDependency(array $item): bool
     {
+        if (!ReadinessPlanning::complete($item)) { return false; }
         if ($item['status'] !== 'approved' || $item['decision'] !== 'acceptance complete'
             || !in_array($item['environment'], ['local','staging'], true)
             || ($item['defects'] ?? '') !== 'none') { return false; }

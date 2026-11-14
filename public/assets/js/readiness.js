@@ -4,6 +4,8 @@
     const $ = selector => document.querySelector(selector);
     const boot = JSON.parse($('#rw-data').textContent);
     const schema = boot.schema;
+    const planning = window.LearmingoReadinessPlanning;
+    const boardLimits = {};
     const views = Object.keys(schema);
     const states = ['planned', 'in progress', 'in review', 'verified', 'approved'];
     const form = $('#rw-form');
@@ -11,7 +13,7 @@
     let items = boot.items, templates = boot.templates;
     let view = views[0], current = null, page = 1, dirty = false, busy = false;
     const pageSize = 12;
-    const designKeys = ['title', 'course', 'assessment', 'version', 'environment', 'rule', 'reviewer', 'details'];
+    const designKeys = ['title', 'course', 'assessment', 'version', 'environment', 'rule', 'reviewer', 'details', 'work_owner', 'priority', 'due_date'];
     const field = name => form.elements.namedItem(name);
     const node = (tag, text, className) => {
         const element = document.createElement(tag);
@@ -50,7 +52,7 @@
             const records = items.filter(item => item.view === section && item.course === course
                 && item.version === version && item.environment === environment);
             const approved = records.filter(item => item.status === 'approved' && item.decision === 'acceptance complete'
-                && ['local', 'staging'].includes(item.environment) && item.defects === 'none'
+                && planning.complete(item) && ['local', 'staging'].includes(item.environment) && item.defects === 'none'
                 && ['rule', 'reviewer', 'evidence', 'rollback'].every(key => String(item[key] || '').trim() !== '')
                 && Object.entries(schema[item.view]).every(([key, definition]) => !definition.required || String(item.fields?.[key] ?? '').trim() !== '')).length;
             return { section, total: records.length, approved };
@@ -85,11 +87,16 @@
     function visibleItems() {
         const q = $('#rw-search').value.toLowerCase();
         const status = $('#rw-status').value, environment = $('#rw-env').value;
-        const matches = items.filter(item => item.view === view
+        const matches = items.filter(item => ($('#rw-scope').value === 'all' || item.view === view)
             && (!status || item.status === status) && (!environment || item.environment === environment)
             && ['course', 'version', 'reviewer'].every(key => (item[key] || '').toLowerCase().includes($(`#rw-${key}`).value.toLowerCase()))
+            && (!$('#rw-priority').value || (item.priority || 'normal') === $('#rw-priority').value)
+            && (item.work_owner || '').toLowerCase().includes($('#rw-owner').value.toLowerCase())
+            && (!$('#rw-attention').value || ({ overdue: planning.overdue(item), week: planning.dueSoon(item), issues: planning.openIssues(item).length > 0 || (!!item.defects && item.defects !== 'none'), unassigned: !item.work_owner })[$('#rw-attention').value])
             && JSON.stringify({ ...item, snapshots: undefined, history: undefined }).toLowerCase().includes(q));
         matches.sort((a, b) => {
+            if ($('#rw-sort').value === 'due') return (a.due_date || '9999-12-31').localeCompare(b.due_date || '9999-12-31') || a.title.localeCompare(b.title);
+            if ($('#rw-sort').value === 'priority') { const order = { urgent: 0, high: 1, normal: 2, low: 3 }; return order[a.priority || 'normal'] - order[b.priority || 'normal'] || a.title.localeCompare(b.title); }
             if ($('#rw-sort').value === 'title') return a.title.localeCompare(b.title);
             if ($('#rw-sort').value === 'status') return states.indexOf(a.status) - states.indexOf(b.status) || a.title.localeCompare(b.title);
             return (b.updated_at || '').localeCompare(a.updated_at || '') || a.title.localeCompare(b.title);
@@ -110,6 +117,27 @@
         }
     }
 
+    function recordCard(item) {
+        const card = node('article', undefined, 'rw-card');
+        const heading = node('div', undefined, 'rw-heading');
+        heading.append(node('h3', item.title), node('span', item.status, 'rw-pill'));
+        card.append(heading, node('p', item.view, 'rw-eyebrow'),
+            node('p', planning.summary(item), planning.overdue(item) ? 'rw-warning' : 'rw-planning-summary'),
+            node('p', `${item.course} · ${item.version} · ${item.environment}`),
+            node('p', `Reviewer: ${item.reviewer || 'Unassigned'} · Decision: ${item.decision}`));
+        if (item.score !== undefined && item.score !== '') card.append(node('p', `Observed score: ${item.score}%`));
+        const steps = node('div', undefined, 'rw-steps');
+        states.forEach((status, index) => steps.append(node('span', `${index + 1} ${status}`, index <= states.indexOf(item.status) ? 'done' : '')));
+        card.append(steps);
+        if (item.defects && item.defects !== 'none') card.append(node('p', `Additional defect notes: ${item.defects}`, 'rw-warning'));
+        const links = node('div', undefined, 'rw-links'); evidenceLinks(item.evidence, links); card.append(links);
+        for (const issue of planning.openIssues(item)) card.append(node('p', `${issue.severity.toUpperCase()}: ${issue.title}`, 'rw-warning'));
+        const actions = node('div', undefined, 'rw-toolbar');
+        actions.append(button('Review record', () => edit(item)), button('Copy to new planned item', () => edit(item, true)));
+        card.append(actions, node('small', `Updated ${date(item.updated_at)} · revision ${item.revision}`));
+        return card;
+    }
+
     function render() {
         const stats = $('#rw-stats');
         stats.replaceChildren();
@@ -127,6 +155,8 @@
             }));
         }
         const visible = visibleItems();
+        $('#rw-title').textContent = $('#rw-scope').value === 'all' ? 'All workflow areas' : view;
+        $('#rw-health').textContent = `${visible.length} matching records · ${visible.filter(planning.overdue).length} overdue · ${visible.reduce((total, item) => total + planning.openIssues(item).length, 0)} tracked open defects · ${visible.filter(item => !item.work_owner).length} unassigned`;
         const pages = Math.max(1, Math.ceil(visible.length / pageSize));
         page = Math.min(page, pages);
         const list = $('#rw-list'); list.replaceChildren();
@@ -136,25 +166,24 @@
                 ? 'Adjust the filters to see more records.' : 'Start with a built-in or saved template. Acceptance remains pending until evidence is reviewed.'));
             list.append(empty);
         }
-        for (const item of visible.slice((page - 1) * pageSize, page * pageSize)) {
-            const card = node('article', undefined, 'rw-card');
-            const heading = node('div', undefined, 'rw-heading');
-            heading.append(node('h3', item.title), node('span', item.status, 'rw-pill'));
-            card.append(heading, node('p', `${item.course} · ${item.version} · ${item.environment}`),
-                node('p', `Reviewer: ${item.reviewer || 'Unassigned'} · Decision: ${item.decision}`));
-            if (item.score !== undefined && item.score !== '') card.append(node('p', `Observed score: ${item.score}%`));
-            const steps = node('div', undefined, 'rw-steps');
-            states.forEach((status, index) => steps.append(node('span', `${index + 1} ${status}`, index <= states.indexOf(item.status) ? 'done' : '')));
-            card.append(steps);
-            if (item.defects && item.defects !== 'none') card.append(node('p', `Open defects: ${item.defects}`, 'rw-warning'));
-            const links = node('div', undefined, 'rw-links'); evidenceLinks(item.evidence, links); card.append(links);
-            const actions = node('div', undefined, 'rw-toolbar');
-            actions.append(button('Review record', () => edit(item)), button('Copy to new planned item', () => edit(item, true)));
-            card.append(actions, node('small', `Updated ${date(item.updated_at)} · revision ${item.revision}`));
-            list.append(card);
-        }
+        const boardMode = $('#rw-display').value === 'board';
+        list.hidden = boardMode;
+        const board = $('#rw-board'); board.hidden = !boardMode; board.replaceChildren();
+        if (boardMode) {
+            for (const status of states) {
+                const records = visible.filter(item => item.status === status);
+                const column = node('section', undefined, 'rw-board-column');
+                column.setAttribute('aria-label', status);
+                column.append(node('h3', `${status} (${records.length})`));
+                const limit = boardLimits[status] || 12;
+                records.slice(0, limit).forEach(item => column.append(recordCard(item)));
+                if (!records.length) column.append(node('p', 'No matching work.'));
+                if (records.length > limit) column.append(button(`Show more (${records.length - limit} remaining)`, () => { boardLimits[status] = limit + 12; render(); }));
+                board.append(column);
+            }
+        } else visible.slice((page - 1) * pageSize, page * pageSize).forEach(item => list.append(recordCard(item)));
         const pagination = $('#rw-pagination');
-        pagination.replaceChildren();
+        pagination.replaceChildren(); pagination.hidden = boardMode;
         const previous = button('Previous', () => { page--; render(); }); previous.disabled = page <= 1;
         const next = button('Next', () => { page++; render(); }); next.disabled = page >= pages;
         pagination.append(previous, node('span', `${visible.length} records · Page ${page} of ${pages}`), next);
@@ -202,6 +231,7 @@
             lockControl(field(`fields[${key}]`), locked && !(index === 2 && definition.review));
         }
         ['evidence', 'defects', 'rollback', 'score'].forEach(key => lockControl(field(key), index >= 3 && !reopening));
+        planning.lock(locked, index >= 3 && !reopening);
         if (reopening) field('decision').value = 'hold';
         $('#rw-reopen').hidden = !current || current.status === 'planned';
         $('#rw-advance').hidden = !current || current.status === 'approved' || (current.status !== 'planned' && reopening);
@@ -209,7 +239,7 @@
         $('#rw-next-step').textContent = !current ? 'Start as planned. Save the design before progressing.' : reopening && index > 0
             ? 'Saving as planned resets the publication decision and starts a fresh review cycle.'
             : ({ planned: 'Next: start implementation and complete the design fields.', 'in progress': 'Next: assign a reviewer, complete required fields and define the grading or acceptance rule.',
-                'in review': 'Add evidence, record results and rollback notes, and resolve defects. Design changes require returning to planned.',
+                'in review': 'Complete the checklist, resolve tracked defects with evidence, and record results and rollback notes. Design changes require returning to planned.',
                 verified: 'Evidence is locked. Set the publication decision to acceptance complete when approving.',
                 approved: 'Acceptance is recorded. Production publishing remains disabled. Reopen before changing approved content.' })[current.status];
     }
@@ -219,7 +249,7 @@
         for (const key of ['title','course','assessment','version','status','environment','rule','reviewer','score','details','evidence','defects','rollback','decision']) rows[key] = String(snapshot[key] ?? '');
         for (const [key, definition] of Object.entries(schema[snapshot.view] || {})) rows[definition.label] = snapshot.fields?.[key] ?? '';
         if (snapshot.view === 'Release readiness') rows['Accepted dependency revisions'] = Object.entries(snapshot.dependencies || {}).map(([id, revision]) => `${id}: revision ${revision}`).join('\n');
-        return rows;
+        return { ...rows, ...planning.snapshotRows(snapshot) };
     }
 
     function comparison(a, b, onlyChanges) {
@@ -266,10 +296,11 @@
         const template = selectedTemplate();
         let data = item ? structuredClone(item) : {
             title: '', course: '', assessment: '', version: 'v1', environment: 'staging', status: 'planned', decision: 'hold',
-            rule: template?.rule || '', details: template?.details || '', fields: template?.fields || {},
+            rule: template?.rule || '', details: template?.details || '', fields: template?.fields || {}, checklist: planning.copyChecklist(template || {}), issues: [], work_owner: '', priority: 'normal', due_date: '',
         };
         if (copy) {
             data.fields = data.fields || {};
+            data.checklist = planning.copyChecklist(data); data.issues = []; data.work_owner = ''; data.due_date = '';
             data = { ...data, id: '', revision: '', title: `${item.title} (copy)`, status: 'planned', decision: 'hold', evidence: '', score: '', defects: '', rollback: '', reviewer: '' };
             for (const [key, definition] of Object.entries(schema[data.view])) if (definition.review) data.fields[key] = definition.options?.includes('pending') ? 'pending' : '';
         }
@@ -284,6 +315,7 @@
         $('#rw-editor-title').textContent = copy ? 'New planned copy' : current ? current.title : 'New readiness record';
         $('#rw-structured-title').textContent = field('view').value;
         structuredFields(data.fields);
+        planning.render(data);
         $('#rw-template-name').value = template?.name || '';
         $('#rw-update-template').disabled = !template || template.view !== field('view').value;
         evidenceLinks(data.evidence, $('#rw-evidence-links'));
@@ -294,7 +326,7 @@
     function formData() {
         const data = new FormData(form);
         // Reviewed selects are disabled in the editor but retain their canonical values on save.
-        for (const control of form.elements) if (control.name && control.disabled) data.set(control.name, control.value);
+        for (const control of form.elements) if (control.name && control.disabled && (control.type !== 'checkbox' || control.checked)) data.set(control.name, control.value);
         return data;
     }
 
@@ -324,6 +356,7 @@
             busy = false;
             form.inert = false;
             document.querySelectorAll('#rw-form button').forEach(control => { control.disabled = false; });
+            if (dialog.open) updateGuidance();
             $('#rw-update-template').disabled = !selectedTemplate() || selectedTemplate().view !== field('view').value;
         }
     }
@@ -346,12 +379,12 @@
     }
 
     document.querySelectorAll('[data-view]').forEach(control => control.addEventListener('click', () => {
-        view = control.dataset.view; page = 1; $('#rw-title').textContent = view;
+        view = control.dataset.view; $('#rw-scope').value = 'section'; page = 1; $('#rw-title').textContent = view;
         document.querySelectorAll('[data-view]').forEach(item => item.removeAttribute('aria-current'));
         control.setAttribute('aria-current', 'page'); render();
     }));
-    for (const id of ['#rw-search','#rw-status','#rw-env','#rw-course','#rw-version','#rw-reviewer','#rw-sort']) $(id).addEventListener('input', () => { page = 1; render(); });
-    $('#rw-clear').onclick = () => { for (const id of ['#rw-search','#rw-status','#rw-env','#rw-course','#rw-version','#rw-reviewer']) $(id).value = ''; page = 1; render(); };
+    for (const id of ['#rw-search','#rw-status','#rw-env','#rw-course','#rw-version','#rw-reviewer','#rw-sort','#rw-owner','#rw-priority','#rw-attention','#rw-display','#rw-scope']) $(id).addEventListener('input', () => { page = 1; render(); });
+    $('#rw-clear').onclick = () => { for (const id of ['#rw-search','#rw-status','#rw-env','#rw-course','#rw-version','#rw-reviewer','#rw-owner','#rw-priority','#rw-attention']) $(id).value = ''; page = 1; render(); };
     $('#rw-template').onchange = () => { $('#rw-delete-template').disabled = !selectedTemplate(); };
     $('#rw-new').onclick = () => edit();
     function closeEditor() {

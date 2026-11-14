@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Learmingo\Services\ReadinessWorkspace;
 use Learmingo\Services\ReadinessSchema;
 use Learmingo\Services\ReadinessTemplates;
+use Learmingo\Services\ReadinessRegisterExport;
 use Learmingo\Core\Csrf;
 use Learmingo\Core\Response;
 
@@ -45,6 +46,20 @@ $router->get('/admin/readiness/export', static function () use ($requireRole, $w
         echo $json;
     } catch (\RuntimeException | \JsonException $error) {
         Response::html('Workspace export is unavailable.', 503);
+    }
+});
+
+$router->get('/admin/readiness/export-csv', static function () use ($requireRole, $workspaceStore): void {
+    $requireRole('admin');
+    header('Cache-Control: no-store');
+    try {
+        $csv = ReadinessRegisterExport::csv($workspaceStore()->run());
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="learmingo-task-register.csv"');
+        header('X-Content-Type-Options: nosniff');
+        echo $csv;
+    } catch (\RuntimeException | \JsonException $error) {
+        Response::html('Task register export is unavailable.', 503);
     }
 });
 

@@ -88,3 +88,23 @@
     .rw-stats > div { padding: 14px; }
     .rw-stats strong { font-size: 23px; }
 }
+
+/* Planning and board views share the same workflow actions and focus behavior. */
+.rw-task-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: end; padding: 12px 0; border-bottom: 1px solid var(--rw-line); }
+.rw-issue-row { padding: 18px; margin: 16px 0; background: var(--rw-soft); border: 1px solid var(--rw-line); border-radius: 8px; }
+.rw-issue-row > button { align-self: end; justify-self: start; }
+.rw-board { display: grid; grid-template-columns: repeat(5, minmax(250px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 16px; }
+.rw-board-column { min-width: 0; border: 1px solid var(--rw-line); border-radius: 10px; background: var(--rw-soft); padding: 12px; }
+.rw-board-column > h3 { text-transform: capitalize; font-size: 15px; padding: 8px; }
+.rw-board .rw-card { background: var(--rw-bg); padding: 14px; }
+.rw-board .rw-card h3 { font-size: 16px; }
+.rw-board .rw-card p { font-size: 12px; }
+.rw-board .rw-heading { flex-wrap: wrap; gap: 8px; }
+.rw-board .rw-steps { display: none; }
+.rw-board .rw-toolbar { align-items: stretch; flex-direction: column; }
+.rw-planning-summary { color: var(--rw-muted); font-size: 13px; }
+@media (max-width: 600px) {
+    .rw-board { grid-template-columns: minmax(0, 1fr); overflow: visible; }
+    .rw-task-row { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .rw-task-row button { justify-self: start; }
+}

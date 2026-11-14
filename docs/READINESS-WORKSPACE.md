@@ -13,8 +13,10 @@ The admin workspace is `/admin/readiness`. This branch preserves Learmingo's exi
 | Certificates | Template reference, language, eligibility, verification/revocation rules, staging issuance count and acceptance outcome |
 | Course revisions | Previous version, outcomes, lessons, assessment mapping, eligibility and migration impact snapshots |
 | Release readiness | Six-area approval coverage and installation, permissions, backup and browser/device acceptance assertions |
+| Work planning | Work owner, priority, due date and completion checklist |
+| Defects | Stable defect references, severity, assignee, status, resolution notes and evidence |
 | Common records | Course, assessment/reference, version, status, environment, grading/acceptance rule, reviewer, evidence URLs, defects, rollback notes and publication decision |
-| Navigation | Search, course/version/reviewer/status/environment filters, sort, pagination, reload and JSON export |
+| Navigation | List/board views, single/all-area scope, owner/priority/overdue/open-defect filters, CSV register, search, course/version/reviewer/status/environment filters, sort, pagination, reload and JSON export |
 | Templates | Built-in blank form per view; create, select, update and delete saved templates; configuration-only reuse |
 | History | Actor, timestamp, transition, decision, revision, full content snapshots, comparison with current content and restore as a planned revision |
 | Course comparison | Two saved revisions of the same course, including structured fields; all fields or changes only |
@@ -26,7 +28,7 @@ The workspace tracks acceptance work. It does not execute assessments, grade lea
 1. Every new or copied record starts **planned**. Required identity fields are title, course and version. Templates carry design configuration only; scores, evidence, reviewer assignment, approval status and release checks are not inherited.
 2. **In progress** permits design and evidence preparation.
 3. **In review** requires an assigned reviewer, an acceptance/grading rule and the view's required structured fields. Design and ownership are locked. Review result fields, observed scores, evidence, defects and rollback notes remain editable.
-4. **Verified** requires local or staging evidence URLs, rollback notes and defect notes exactly `none`. Design, review results, observed score and verification evidence are then locked. URLs are validated syntactically; their contents are not automatically fetched or verified.
+4. **Verified** requires completion of all checklist tasks, resolution of every tracked defect with notes and evidence, local or staging evidence URLs, rollback notes and defect notes exactly `none`. Design, review results, observed score and verification evidence are then locked. URLs are validated syntactically; their contents are not automatically fetched or verified.
 5. **Approved** requires the acceptance-complete publication decision. A record that needs changes must return to planned. Returning to planned resets its decision to hold.
 
 The editor offers the current state, the next state and return to planned. Server checks enforce the same sequence. Reviewer names are assignments recorded by an administrator, not authenticated second-person sign-off. The history actor is always the authenticated administrator's ID. QA has not been inferred from these metadata fields.
@@ -41,7 +43,7 @@ Each new save preserves an immutable content snapshot within the record history.
 
 Restore uses the server-held snapshot and the current optimistic revision. It creates a new planned revision, preserves history, resets the decision to hold, clears score/evidence/defects/rollback fields and resets release acceptance assertions. It never restores historical approval or publishes a course. A copied record starts a separate history. Comparison of course versions uses separate course-revision records, while history comparisons show the saved content of an individual record against its current content.
 
-Saved templates contain the view, structured design fields, grading rule and additional design notes. Template updates and deletion require the saved template revision. Template changes do not alter existing readiness records.
+Saved templates contain the view, structured design fields, grading rule, additional design notes and checklist tasks with completion reset. Template updates and deletion require the saved template revision. Template changes do not alter existing readiness records.
 
 ## Storage and access
 
@@ -61,3 +63,7 @@ The completion pass used source review and JavaScript syntax / whitespace checks
 Before acceptance, run the repository checks and exercise access/CSRF, all transitions and structured validations, saved template lifecycle, concurrent edits, evidence links, snapshot restoration, dependency invalidation, revision comparison, responsive/theme behavior, persistent storage permissions and backup/restore. Existing passing results from the initial draft do not certify the completion changes.
 
 Rollback removes the new routes, navigation entry, services and assets by reverting the feature commits. Preserve both readiness JSON files and their backups for audit retention. This branch adds no database migrations and performs no production operations.
+
+## Task planning extension
+
+Work ownership, due dates, priority, checklists, structured defects and the board/register views are documented in `READINESS-PLANNING.md`. They remain acceptance-workspace metadata and do not send notifications or modify live learning records.
