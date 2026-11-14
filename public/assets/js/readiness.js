@@ -1,0 +1,29 @@
+(() => {
+'use strict';
+const $=s=>document.querySelector(s), states=['planned','in progress','in review','verified','approved'];
+let items=JSON.parse($('#rw-data').textContent), view='Assessment design';
+const templates={
+'Assessment design':'Learning outcomes:\nAssessment type:\nAttempts and time limit:\nPass threshold:\nAccessibility checks:',
+'Question banks':'Topic and difficulty:\nQuestion types:\nCorrect answers and rationale:\nRandomization:\nImport validation:',
+'Instructor review':'Application reference:\nQualifications:\nTeaching evidence:\nConflict of interest:\nReview outcome:',
+'Grading and moderation':'Rubric criteria and weights:\nBoundary cases:\nManual overrides:\nSecond-marker outcome:\nAppeal checks:',
+'Certificate templates and issuance':'Template and language:\nEligibility rule:\nSerial and verification URL:\nDuplicate/revocation checks:\nStaging issuance evidence:',
+'Course revision history':'Learning outcomes:\nLessons:\nAssessment mapping:\nGrading rule:\nCertificate eligibility:\nMigration impact:',
+'Release readiness':'Installation checks:\nRole permissions:\nAssessment acceptance:\nCertificate acceptance:\nBackup and restore:\nRollback rehearsal:'};
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+function render(){
+ const stats=$('#rw-stats');stats.replaceChildren();for(const [label,value] of [['Tracked items',items.length],['In review',items.filter(i=>i.status==='in review').length],['Verified / approved',items.filter(i=>['verified','approved'].includes(i.status)).length],['Production publishing','Disabled']]){const card=el('div');card.append(el('strong',String(value)),el('span',label));stats.append(card);}
+ const q=$('#rw-search').value.toLowerCase(),status=$('#rw-status').value,env=$('#rw-env').value,course=$('#rw-course').value.toLowerCase();
+ const visible=items.filter(i=>i.view===view&&(!status||i.status===status)&&(!env||i.environment===env)&&i.course.toLowerCase().includes(course)&&JSON.stringify(i).toLowerCase().includes(q));
+ const list=$('#rw-list');list.replaceChildren();
+ if(!visible.length){const empty=el('div',undefined,'rw-empty');empty.append(el('h3','Ready for the next milestone'),el('p',items.some(i=>i.view===view)?'No records match these filters.':'Create a record from the reusable template. No acceptance has been assumed.'));list.append(empty);}
+ for(const item of visible){const card=el('article',undefined,'rw-card');const head=el('div',undefined,'rw-heading');head.append(el('h3',item.title),el('span',item.status,'rw-pill'));card.append(head,el('p',`${item.course} · ${item.version} · ${item.environment}`),el('p',`Reviewer: ${item.reviewer||'Unassigned'} · Decision: ${item.decision}`));const steps=el('div',undefined,'rw-steps');states.forEach((s,k)=>steps.append(el('span',`${k+1} ${s}`,k<=states.indexOf(item.status)?'done':'')));card.append(steps);const open=el('button','Review record');open.type='button';open.onclick=()=>edit(item);card.append(open);list.append(card);}
+ for(const selector of ['#rw-left','#rw-right']){const select=$(selector),previous=select.value;select.replaceChildren(el('option','Select revision'));select.firstChild.value='';items.filter(i=>i.view==='Course revision history').forEach(i=>{const o=el('option',`${i.course} / ${i.version} / ${i.title}`);o.value=i.id;select.append(o);});select.value=previous;}
+}
+function edit(item){const form=$('#rw-form');form.reset();$('#rw-error').textContent='';const data=item||{id:'',revision:0,view,version:'v1',status:'planned',environment:'staging',decision:'hold',details:templates[view]};for(const [key,value] of Object.entries(data)){if(form.elements.namedItem(key))form.elements.namedItem(key).value=value;}$('#rw-history').replaceChildren();for(const h of item?.history||[])$('#rw-history').append(el('p',`${h.at} · User #${h.actor} · ${h.from||'new'} → ${h.to} · revision ${h.revision} · ${h.decision}`));$('#rw-dialog').showModal();}
+ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;$('#rw-title').textContent=view;document.querySelectorAll('[data-view]').forEach(n=>n.removeAttribute('aria-current'));b.setAttribute('aria-current','page');render();});
+ for(const selector of ['#rw-search','#rw-status','#rw-env','#rw-course'])$(selector).addEventListener('input',render);
+ $('#rw-new').onclick=()=>edit();$('#rw-close').onclick=()=>$('#rw-dialog').close();
+ $('#rw-form').onsubmit=async event=>{event.preventDefault();$('#rw-save').disabled=true;try{const response=await fetch('/admin/readiness',{method:'POST',body:new FormData(event.target),headers:{Accept:'application/json'}});if(!response.headers.get('content-type')?.includes('application/json'))throw Error('Session expired or server unavailable. Reload and sign in.');const result=await response.json();if(!response.ok)throw Error(result.error||'Save failed.');items=Object.values(result.items);render();$('#rw-dialog').close();$('#rw-message').textContent='Record saved. Production publishing remains disabled.';}catch(error){$('#rw-error').textContent=error.message;}finally{$('#rw-save').disabled=false;}};
+ $('#rw-compare').onclick=()=>{const a=items.find(i=>i.id===$('#rw-left').value),b=items.find(i=>i.id===$('#rw-right').value),target=$('#rw-diff');target.replaceChildren();if(!a||!b||a.id===b.id||a.course!==b.course){target.textContent='Select two different revisions of the same course.';return;}const table=el('table');const header=el('tr');['Field',a.version,b.version].forEach(t=>header.append(el('th',t)));table.append(header);for(const key of ['title','version','assessment','status','environment','rule','reviewer','details','evidence','defects','rollback','decision']){const row=el('tr',undefined,a[key]===b[key]?'':'rw-changed');[key,a[key],b[key]].forEach(t=>row.append(el('td',t)));table.append(row);}target.append(table);};render();
+})();

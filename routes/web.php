@@ -168,3 +168,6 @@ require __DIR__ . '/milestone3.php';
 
 // LEARMINGO_PREMIUM_FRONTEND_V101 — course-first UI, asset bridge and demo catalogue.
 require __DIR__ . '/frontend.php';
+
+// Isolated acceptance records; never publishes live learning content.
+require __DIR__ . '/readiness.php';
